@@ -15,7 +15,7 @@ RUN go build \
     -ldflags "-w -s \
     -X github.com/kairos-io/enki/internal/version.version=$ENKI_VERSION \
     -X github.com/kairos-io/enki/internal/version.gitCommit=$ENKI_COMMIT" \
-    -o /usr/bin/enki
+    -o /enki
 
 FROM gcr.io/kaniko-project/executor:latest
 
