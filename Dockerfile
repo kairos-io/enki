@@ -5,7 +5,17 @@ WORKDIR /build
 COPY . .
 
 ENV CGO_ENABLED=0
-RUN go build -ldflags '-extldflags "-static"' -o /enki
+RUN go mod download
+# Set arg/env after go mod download, otherwise we invalidate the cached layers due to the commit changing easily
+ARG ENKI_VERSION
+ARG ENKI_COMMIT
+ENV ENKI_VERSION=${ENKI_VERSION}
+ENV ENKI_COMMIT=${ENKI_COMMIT}
+RUN go build \
+    -ldflags "-w -s \
+    -X github.com/kairos-io/enki/internal/version.version=$ENKI_VERSION \
+    -X github.com/kairos-io/enki/internal/version.gitCommit=$ENKI_COMMIT" \
+    -o /usr/bin/enki
 
 FROM gcr.io/kaniko-project/executor:latest
 
