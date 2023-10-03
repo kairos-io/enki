@@ -66,4 +66,6 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ steps.prep.outputs.tags }}
-          build-args: "ENKI_VERSION=${{ steps.prep.outputs.version }}, ENKI_COMMIT=${{ steps.prep.outputs.ref }}"
+          build-args: |
+            ENKI_VERSION=${{ steps.prep.outputs.version }}
+            ENKI_COMMIT=${{ steps.prep.outputs.ref }}
