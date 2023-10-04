@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("ConverterAction", func() {
+var _ = Describe("ConverterAction", func() {
 	var rootfsPath, resultDir, imageName string
 	var action *ConverterAction
 	var runner *v1mock.FakeRunner
@@ -88,7 +88,7 @@ func removeImage(image string) {
 // This way we avoid sudo.
 func cleanupDir(path string) {
 	cmd := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("docker run --rm -v %[1]s:/work ubuntu /bin/bash -c 'rm -rf /work/*'", path))
+		fmt.Sprintf("docker run --rm -v %[1]s:/work busybox /bin/bash -c 'rm -rf /work/*'", path))
 	out, err := cmd.CombinedOutput()
 	Expect(err).ToNot(HaveOccurred(), string(out))
 	Expect(os.RemoveAll(path)).ToNot(HaveOccurred())

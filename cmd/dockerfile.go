@@ -1,0 +1,51 @@
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/kairos-io/enki/pkg/action"
+	"github.com/spf13/cobra"
+)
+
+// NewDockerfilCmd generates a dockerfile which can be used to build a kairos
+// image out of the provided one.
+func NewDockerfileCmd() *cobra.Command {
+	c := &cobra.Command{
+		Use:   "dockerfile",
+		Short: "Create a dockerfile that builds a Kairos image from the provided one",
+		Long: "Create a dockerfile that builds a Kairos image from the provided one\n\n" +
+			"The base image can be specified either as a directory where the image has been extracted or as an image uri.\n" +
+			"This is best effort. Enki will try to detect the distribution and add the necessary bits to convert it to a Kairos image",
+		Args: cobra.ExactArgs(3),
+		PreRunE: func(cmd *cobra.Command, args []string) error {
+			return CheckRoot() // TODO: Do we need root?
+		},
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
+			cmd.SilenceUsage = true
+			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
+
+			rootfsDir, _ := cmd.Flags().GetString("rootfs-dir")
+			baseImageURI, _ := cmd.Flags().GetString("base-image-uri")
+
+			a := action.NewDockerfileAction(rootfsDir, baseImageURI)
+			dockerfile, err := a.Run()
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(dockerfile)
+
+			return nil
+		},
+	}
+
+	return c
+}
+
+func init() {
+	c := NewDockerfileCmd()
+	rootCmd.AddCommand(c)
+	c.Flags().StringP("rootfs-dir", "r", "", "the directory containing the extracted base image rootfs")
+	c.Flags().StringP("base-image-uri", "i", "", "the URI of the base image")
+}
