@@ -5,21 +5,17 @@ import (
 	"fmt"
 )
 
-// ConverterAction is the action that converts a non-kairos image to a Kairos one.
-// The conversion happens in a best-effort manner. It's not guaranteed that
-// any distribution will successfully be converted to a Kairos flavor. See
-// the Kairos releases for known-to-work flavors.
-// The "input" of this action is a directory where the rootfs is extracted.
-// [TBD] The output is the same directory updated to be a Kairos image
 type DockerfileAction struct {
-	rootFSPath   string
-	baseImageURI string
+	rootFSPath     string
+	baseImageURI   string
+	frameworkImage string
 }
 
-func NewDockerfileAction(rootfsPath, baseImageURI string) *DockerfileAction {
+func NewDockerfileAction(rootfsPath, baseImageURI, frameworkImage string) *DockerfileAction {
 	return &DockerfileAction{
-		rootFSPath:   rootfsPath,
-		baseImageURI: baseImageURI,
+		rootFSPath:     rootfsPath,
+		baseImageURI:   baseImageURI,
+		frameworkImage: frameworkImage,
 	}
 }
 
@@ -32,8 +28,8 @@ func (a *DockerfileAction) Run() (dockerfile string, err error) {
 	dockerfile += a.baseImageSection()
 	dockerfile += a.dnsSection()
 	dockerfile += a.luetInstallSection("")
-	dockerfile += a.installFrameworkSection()
 	dockerfile += a.switchRootSection()
+	dockerfile += a.installFrameworkSection()
 	dockerfile += a.osSpecificSection()
 
 	return dockerfile, nil
@@ -84,10 +80,9 @@ COPY --from=builder /rootfs/ .
 // installFrameworkSection chooses the right framework image for the current
 // base image and upacks it to the /rootfs directory
 func (a *DockerfileAction) installFrameworkSection() string {
-	return `
-COPY --from=quay.io/kairos/enki /enki /enki
-RUN /bin/bash -c 'luet util unpack quay.io/kairos/framework:$(/enki find-matching-framework) /'
-`
+	return fmt.Sprintf(`
+COPY --from=%s . /
+`, a.frameworkImage)
 }
 
 func (a *DockerfileAction) osSpecificSection() string {
@@ -101,6 +96,10 @@ func (a *DockerfileAction) Validate() error {
 	if a.rootFSPath != "" && a.baseImageURI != "" ||
 		a.rootFSPath == "" && a.baseImageURI == "" {
 		return errors.New("exactly one of 'rootfs-dir' and 'base-image-uri' should be defined")
+	}
+
+	if a.frameworkImage == "" {
+		return errors.New("'framework-image' should be defined")
 	}
 
 	return nil

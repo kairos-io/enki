@@ -13,7 +13,7 @@ var _ = Describe("DockerfileAction", func() {
 
 	When("both a rootfs dir and a base image URI are defined", func() {
 		BeforeEach(func() {
-			action = NewDockerfileAction("somedir", "quay.io/kairos/someimage")
+			action = NewDockerfileAction("somedir", "quay.io/kairos/someimage", "quay.io/kairos/framework:master_ubuntu")
 		})
 
 		It("returns an error", func() {
@@ -28,7 +28,7 @@ var _ = Describe("DockerfileAction", func() {
 
 			BeforeEach(func() {
 				rootfsPath = prepareEmptyRootfs()
-				action = NewDockerfileAction(rootfsPath, "")
+				action = NewDockerfileAction(rootfsPath, "", "quay.io/kairos/framework:master_ubuntu")
 			})
 
 			AfterEach(func() {
@@ -45,7 +45,7 @@ var _ = Describe("DockerfileAction", func() {
 
 		When("a base image uri is defined", func() {
 			BeforeEach(func() {
-				action = NewDockerfileAction("", "ubuntu:latest")
+				action = NewDockerfileAction("", "ubuntu:latest", "quay.io/kairos/framework:master_ubuntu")
 			})
 
 			It("starts with the provided base image", func() {
@@ -63,7 +63,7 @@ var _ = Describe("DockerfileAction", func() {
 
 			BeforeEach(func() {
 				rootfsPath = prepareRootfsFromImage("ubuntu:latest")
-				action = NewDockerfileAction(rootfsPath, "")
+				action = NewDockerfileAction(rootfsPath, "", "quay.io/kairos/framework:master_ubuntu")
 			})
 
 			AfterEach(func() {
@@ -77,7 +77,7 @@ var _ = Describe("DockerfileAction", func() {
 
 		When("base image URI is defined", func() {
 			BeforeEach(func() {
-				action = NewDockerfileAction("", "ubuntu:latest")
+				action = NewDockerfileAction("", "ubuntu:latest", "quay.io/kairos/framework:master_ubuntu")
 			})
 
 			It("adds Kairos bits", func() {
@@ -102,5 +102,5 @@ func dockerfileMustHaveLuet(d string) {
 
 func dockerfileMustInstallFramework(d string) {
 	By("checking installation of framework bits")
-	Expect(d).To(MatchRegexp("luet util unpack quay.io/kairos/framework"))
+	Expect(d).To(MatchRegexp("COPY --from=quay.io/kairos/framework"))
 }

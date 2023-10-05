@@ -16,10 +16,11 @@ import (
 // The "input" of this action is a directory where the rootfs is extracted.
 // [TBD] The output is the same directory updated to be a Kairos image
 type ConverterAction struct {
-	rootFSPath string
-	resultPath string
-	imageName  string
-	Runner     Runner
+	rootFSPath     string
+	resultPath     string
+	imageName      string
+	frameworkImage string
+	Runner         Runner
 }
 
 // A runner that can shell-out to other commands but also be mocked in tests.
@@ -37,12 +38,13 @@ func (r RealRunner) Run(command string, args ...string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-func NewConverterAction(rootfsPath, resultPath, imageName string, runner Runner) *ConverterAction {
+func NewConverterAction(rootfsPath, resultPath, imageName, frameworkImage string, runner Runner) *ConverterAction {
 	return &ConverterAction{
-		rootFSPath: rootfsPath,
-		resultPath: resultPath,
-		imageName:  imageName,
-		Runner:     runner,
+		rootFSPath:     rootfsPath,
+		frameworkImage: frameworkImage,
+		resultPath:     resultPath,
+		imageName:      imageName,
+		Runner:         runner,
 	}
 }
 
@@ -55,7 +57,7 @@ func NewConverterAction(rootfsPath, resultPath, imageName string, runner Runner)
 // E.g.
 // CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o build/enki && docker run -it -e PATH=/kaniko -v /tmp -v /home/dimitris/workspace/kairos/osbuilder/tmp/rootfs/:/context -v "$PWD/build/enki":/enki -v $PWD:/build --rm --entrypoint "/enki" gcr.io/kaniko-project/executor:latest convert /context
 func (ca *ConverterAction) Run() (err error) {
-	da := NewDockerfileAction(ca.rootFSPath, "")
+	da := NewDockerfileAction(ca.rootFSPath, "", ca.frameworkImage)
 	dockerfile, err := da.Run()
 	if err != nil {
 		return err

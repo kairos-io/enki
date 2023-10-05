@@ -24,17 +24,18 @@ func NewConvertCmd() *cobra.Command {
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
-			// TODO: Check if this is really an existing dir (not a file)
+			// TODO: Convert these to named arguments
 			rootfsDir := args[0]
 			resultPath := args[1]
 			imageName := args[2]
+			frameworkImage := args[3]
 
 			logger := v1.NewLogger()
 			runner := action.RealRunner{
 				Logger: logger,
 			}
 
-			convertAction := action.NewConverterAction(rootfsDir, resultPath, imageName, runner)
+			convertAction := action.NewConverterAction(rootfsDir, resultPath, frameworkImage, imageName, runner)
 			err := convertAction.Run()
 			if err != nil {
 				logger.Errorf(err.Error())

@@ -25,10 +25,22 @@ func NewDockerfileCmd() *cobra.Command {
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
-			rootfsDir, _ := cmd.Flags().GetString("rootfs-dir")
-			baseImageURI, _ := cmd.Flags().GetString("base-image-uri")
+			rootfsDir, err := cmd.Flags().GetString("rootfs-dir")
+			if err != nil {
+				return err
+			}
 
-			a := action.NewDockerfileAction(rootfsDir, baseImageURI)
+			baseImageURI, err := cmd.Flags().GetString("base-image-uri")
+			if err != nil {
+				return err
+			}
+
+			frameworkImage, err := cmd.Flags().GetString("framework-image")
+			if err != nil {
+				return err
+			}
+
+			a := action.NewDockerfileAction(rootfsDir, baseImageURI, frameworkImage)
 			dockerfile, err := a.Run()
 			if err != nil {
 				return err
@@ -48,4 +60,5 @@ func init() {
 	rootCmd.AddCommand(c)
 	c.Flags().StringP("rootfs-dir", "r", "", "the directory containing the extracted base image rootfs")
 	c.Flags().StringP("base-image-uri", "i", "", "the URI of the base image")
+	c.Flags().StringP("framework-image", "i", "", "the URI of the base image")
 }

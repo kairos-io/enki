@@ -23,7 +23,7 @@ var _ = Describe("ConverterAction", func() {
 		Expect(err).ToNot(HaveOccurred())
 		imageName = newImageName(10)
 		runner = v1mock.NewFakeRunner()
-		action = NewConverterAction(rootfsPath, path.Join(resultDir, "image.tar"), imageName, runner)
+		action = NewConverterAction(rootfsPath, path.Join(resultDir, "image.tar"), imageName, "quay.io/kairos/framework:master_ubuntu", runner)
 	})
 
 	AfterEach(func() {
