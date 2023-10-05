@@ -28,7 +28,9 @@ func (a *DockerfileAction) Run() (dockerfile string, err error) {
 		return "", err
 	}
 	dockerfile += osReleaseSection
+	dockerfile += a.cleanupMachineIDSection()
 	dockerfile += a.switchRootSection()
+	dockerfile += a.enableServicesSection()
 	dockerfile += a.osSpecificSection()
 
 	return dockerfile, nil
@@ -88,7 +90,31 @@ func (a *DockerfileAction) switchRootSection() string {
 	return `
 FROM scratch as rootfs
 
-COPY --from=builder /rootfs/ .
+COPY --from=builder /rootfs/. /.
+
+FROM rootfs
+`
+}
+
+func (a *DockerfileAction) enableServicesSection() string {
+	return `
+RUN <<EOF
+	if [ -f /sbin/openrc ]; then
+		mkdir -p /etc/runlevels/default && \
+			ln -sf /etc/init.d/cos-setup-boot /etc/runlevels/default/cos-setup-boot  && \
+			ln -sf /etc/init.d/cos-setup-network /etc/runlevels/default/cos-setup-network  && \
+			ln -sf /etc/init.d/cos-setup-reconcile /etc/runlevels/default/cos-setup-reconcile && \
+			ln -sf /etc/init.d/kairos-agent /etc/runlevels/default/kairos-agent
+	else
+	  ls /usr/bin
+		# mask systemd-firstboot dont accidentally run block booting
+		systemctl mask systemd-firstboot
+		systemctl enable cos-setup-reconcile.timer && \
+			systemctl enable cos-setup-fs.service && \
+			systemctl enable cos-setup-boot.service && \
+			systemctl enable cos-setup-network.service
+	fi
+EOF
 `
 }
 
@@ -105,9 +131,13 @@ RUN rm -rf /rootfs/etc/ssh/ssh_host_*
 
 func (a *DockerfileAction) osSpecificSection() string {
 	return `
-FROM rootfs
 # Additional os specific things
 `
+}
+
+// cleanupMachineIDSection removes machine-id. It will be generated on first boot.
+func (a *DockerfileAction) cleanupMachineIDSection() string {
+	return "\nRUN rm -rf /rootfs/etc/machine-id\n"
 }
 
 func (a *DockerfileAction) Validate() error {
