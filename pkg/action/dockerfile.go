@@ -32,14 +32,14 @@ func (a *DockerfileAction) Run() (dockerfile string, err error) {
 	dockerfile += a.baseImageSection()
 	dockerfile += a.dnsSection()
 	dockerfile += a.luetInstallSection("")
-	dockerfile += a.footerSection()
+	dockerfile += a.installFrameworkSection()
+	dockerfile += a.switchRootSection()
 	dockerfile += a.osSpecificSection()
 
 	return dockerfile, nil
 }
 
 func (a *DockerfileAction) baseImageSection() string {
-	result := ""
 	if a.baseImageURI != "" {
 		return fmt.Sprintf(`
 FROM %s as base
@@ -49,13 +49,11 @@ COPY --from=base . /rootfs
 `, a.baseImageURI)
 	}
 
-	result = fmt.Sprintf(`
+	return fmt.Sprintf(`
 FROM busybox as builder
 RUN mkdir /rootfs
 COPY %s /rootfs/.
 `, a.rootFSPath)
-
-	return result
 }
 
 func (a *DockerfileAction) dnsSection() string {
@@ -75,11 +73,20 @@ COPY --from=quay.io/luet/base:%s /usr/bin/luet
 `, luetVersion)
 }
 
-func (a *DockerfileAction) footerSection() string {
+func (a *DockerfileAction) switchRootSection() string {
 	return `
 FROM scratch as rootfs
 
 COPY --from=builder /rootfs/ .
+`
+}
+
+// installFrameworkSection chooses the right framework image for the current
+// base image and upacks it to the /rootfs directory
+func (a *DockerfileAction) installFrameworkSection() string {
+	return `
+COPY --from=quay.io/kairos/enki /enki /enki
+RUN /bin/bash -c 'luet util unpack quay.io/kairos/framework:$(/enki find-matching-framework) /'
 `
 }
 

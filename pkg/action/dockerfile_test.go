@@ -91,9 +91,16 @@ func checkForKairosBits(action *DockerfileAction) {
 	dockerfile, err := action.Run()
 	Expect(err).ToNot(HaveOccurred())
 
-	By("checking for installation of luet")
-	Expect(dockerfile).To(MatchRegexp("quay.io/luet/base.* /usr/bin/luet"))
+	dockerfileMustHaveLuet(dockerfile)
+	dockerfileMustInstallFramework(dockerfile)
+}
 
-	By("checking installation of overlay files")
-	// TODO
+func dockerfileMustHaveLuet(d string) {
+	By("checking for installation of luet")
+	Expect(d).To(MatchRegexp("quay.io/luet/base.* /usr/bin/luet"))
+}
+
+func dockerfileMustInstallFramework(d string) {
+	By("checking installation of framework bits")
+	Expect(d).To(MatchRegexp("luet util unpack quay.io/kairos/framework"))
 }
