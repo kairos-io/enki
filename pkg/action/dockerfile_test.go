@@ -1,9 +1,7 @@
 package action_test
 
 import (
-	"fmt"
 	"os"
-	"os/exec"
 
 	. "github.com/kairos-io/enki/pkg/action"
 	. "github.com/onsi/ginkgo/v2"
@@ -41,7 +39,7 @@ var _ = FDescribe("DockerfileAction", func() {
 				dockerfile, err := action.Run()
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(dockerfile).To(MatchRegexp("COPY . /rootfs/."))
+				Expect(dockerfile).To(MatchRegexp("COPY --from=builder /rootfs/ ."))
 			})
 		})
 
@@ -54,7 +52,7 @@ var _ = FDescribe("DockerfileAction", func() {
 				dockerfile, err := action.Run()
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(dockerfile).To(MatchRegexp("FROM ubuntu:latest as builder"))
+				Expect(dockerfile).To(MatchRegexp("FROM ubuntu:latest as base"))
 			})
 		})
 	})
@@ -73,9 +71,7 @@ var _ = FDescribe("DockerfileAction", func() {
 			})
 
 			It("adds Kairos bits", func() {
-				dockerfile, err := action.Run()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(dockerfile).To(MatchRegexp("luet install k3s")) // TODO: Change this to actual bits
+				checkForKairosBits(action)
 			})
 		})
 
@@ -85,28 +81,19 @@ var _ = FDescribe("DockerfileAction", func() {
 			})
 
 			It("adds Kairos bits", func() {
-				dockerfile, err := action.Run()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(dockerfile).To(MatchRegexp("luet install k3s")) // TODO: Change this to actual bits
+				checkForKairosBits(action)
 			})
 		})
 	})
 })
 
-func prepareEmptyRootfs() string {
-	dir, err := os.MkdirTemp("", "kairos-temp")
+func checkForKairosBits(action *DockerfileAction) {
+	dockerfile, err := action.Run()
 	Expect(err).ToNot(HaveOccurred())
 
-	return dir
-}
-func prepareRootfsFromImage(imageURI string) string {
-	dir, err := os.MkdirTemp("", "kairos-temp")
-	Expect(err).ToNot(HaveOccurred())
+	By("checking for installation of luet")
+	Expect(dockerfile).To(MatchRegexp("quay.io/luet/base.* /usr/bin/luet"))
 
-	cmd := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("docker run -v %s:/work quay.io/luet/base util unpack %s /work", dir, imageURI))
-	out, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred(), string(out))
-
-	return dir
+	By("checking installation of overlay files")
+	// TODO
 }

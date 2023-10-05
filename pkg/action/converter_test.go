@@ -1,12 +1,8 @@
 package action_test
 
 import (
-	"fmt"
-	"math/rand"
 	"os"
-	"os/exec"
 	"path"
-	"time"
 
 	v1mock "github.com/kairos-io/kairos-agent/v2/tests/mocks"
 
@@ -19,10 +15,12 @@ var _ = Describe("ConverterAction", func() {
 	var rootfsPath, resultDir, imageName string
 	var action *ConverterAction
 	var runner *v1mock.FakeRunner
+	var err error
 
 	BeforeEach(func() {
-		rootfsPath = prepareRootfs()
-		resultDir = prepareResultDir()
+		rootfsPath = prepareEmptyRootfs()
+		resultDir, err = os.MkdirTemp("", "kairos-temp")
+		Expect(err).ToNot(HaveOccurred())
 		imageName = newImageName(10)
 		runner = v1mock.NewFakeRunner()
 		action = NewConverterAction(rootfsPath, path.Join(resultDir, "image.tar"), imageName, runner)
@@ -49,53 +47,3 @@ var _ = Describe("ConverterAction", func() {
 		})).To(BeNil())
 	})
 })
-
-func prepareRootfs() string {
-	dir, err := os.MkdirTemp("", "kairos-temp")
-	Expect(err).ToNot(HaveOccurred())
-
-	cmd := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("docker run -v %s:/work quay.io/luet/base util unpack ubuntu:latest /work", dir))
-	out, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred(), string(out))
-
-	return dir
-}
-
-func prepareResultDir() string {
-	dir, err := os.MkdirTemp("", "kairos-temp")
-	Expect(err).ToNot(HaveOccurred())
-
-	return dir
-}
-
-func newImageName(n int) string {
-	rand.Seed(time.Now().UnixNano())
-	var letterRunes = []rune("abcdefghijklmnopqrstuvwxyz")
-	b := make([]rune, n)
-	for i := range b {
-		b[i] = letterRunes[rand.Intn(len(letterRunes))]
-	}
-	return string(b)
-}
-
-func removeImage(image string) {
-	cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("docker rmi %s:latest", image))
-	_ = cmd.Run() // Best effort, image may not be there if something failed.
-}
-
-// Cleanup in docker to use the same permissions as those when we created.
-// This way we avoid sudo.
-func cleanupDir(path string) {
-	cmd := exec.Command("/bin/sh", "-c",
-		fmt.Sprintf("docker run --rm -v %[1]s:/work busybox /bin/bash -c 'rm -rf /work/*'", path))
-	out, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred(), string(out))
-	Expect(os.RemoveAll(path)).ToNot(HaveOccurred())
-}
-
-func loadImage(imageTarPath string) {
-	cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("cat %s | docker load", imageTarPath))
-	out, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred(), string(out))
-}

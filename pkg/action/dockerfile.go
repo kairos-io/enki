@@ -31,6 +31,7 @@ func (a *DockerfileAction) Run() (dockerfile string, err error) {
 	dockerfile = ""
 	dockerfile += a.baseImageSection()
 	dockerfile += a.dnsSection()
+	dockerfile += a.luetInstallSection("")
 	dockerfile += a.footerSection()
 	dockerfile += a.osSpecificSection()
 
@@ -45,9 +46,6 @@ FROM %s as base
 FROM busybox as builder
 
 COPY --from=base . /rootfs
-
-FROM rootfs
-# Additional os specific things
 `, a.baseImageURI)
 	}
 
@@ -55,9 +53,6 @@ FROM rootfs
 FROM busybox as builder
 RUN mkdir /rootfs
 COPY %s /rootfs/.
-
-FROM rootfs
-# Additional os specific things
 `, a.rootFSPath)
 
 	return result
@@ -68,6 +63,16 @@ func (a *DockerfileAction) dnsSection() string {
 RUN echo "nameserver 8.8.8.8" > /rootfs/etc/resolv.conf
 RUN cat /rootfs/etc/resolv.conf
 `
+}
+
+func (a *DockerfileAction) luetInstallSection(luetVersion string) string {
+	if luetVersion == "" {
+		luetVersion = "latest"
+	}
+
+	return fmt.Sprintf(`
+COPY --from=quay.io/luet/base:%s /usr/bin/luet
+`, luetVersion)
 }
 
 func (a *DockerfileAction) footerSection() string {
