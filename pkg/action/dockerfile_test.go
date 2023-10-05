@@ -8,7 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = FDescribe("DockerfileAction", func() {
+var _ = Describe("DockerfileAction", func() {
 	var action *DockerfileAction
 
 	When("both a rootfs dir and a base image URI are defined", func() {
