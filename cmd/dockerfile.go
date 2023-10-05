@@ -23,7 +23,7 @@ func NewDockerfileCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cmd.SilenceUsage = true
-			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
+			//cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
 			rootfsDir, err := cmd.Flags().GetString("rootfs-dir")
 			if err != nil {
@@ -59,6 +59,6 @@ func init() {
 	c := NewDockerfileCmd()
 	rootCmd.AddCommand(c)
 	c.Flags().StringP("rootfs-dir", "r", "", "the directory containing the extracted base image rootfs")
-	c.Flags().StringP("base-image-uri", "i", "", "the URI of the base image")
+	c.Flags().StringP("base-image-uri", "b", "", "the URI of the base image")
 	c.Flags().StringP("framework-image", "i", "", "the URI of the base image")
 }
