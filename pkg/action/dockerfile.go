@@ -106,7 +106,6 @@ RUN <<EOF
 			ln -sf /etc/init.d/cos-setup-reconcile /etc/runlevels/default/cos-setup-reconcile && \
 			ln -sf /etc/init.d/kairos-agent /etc/runlevels/default/kairos-agent
 	else
-	  ls /usr/bin
 		# mask systemd-firstboot dont accidentally run block booting
 		systemctl mask systemd-firstboot
 		systemctl enable cos-setup-reconcile.timer && \
