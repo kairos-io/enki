@@ -1,26 +1,19 @@
-ARG GO_VERSION=1.20-alpine3.18
-FROM golang:$GO_VERSION AS builder
 
-WORKDIR /build
-COPY . .
+FROM ubuntu:latest as base
+FROM busybox as builder
 
-ENV CGO_ENABLED=0
-RUN go mod download
-# Set arg/env after go mod download, otherwise we invalidate the cached layers due to the commit changing easily
-ARG ENKI_VERSION
-ARG ENKI_COMMIT
-ENV ENKI_VERSION=${ENKI_VERSION}
-ENV ENKI_COMMIT=${ENKI_COMMIT}
-RUN go build \
-    -ldflags "-w -s \
-    -X github.com/kairos-io/enki/internal/version.version=$ENKI_VERSION \
-    -X github.com/kairos-io/enki/internal/version.gitCommit=$ENKI_COMMIT" \
-    -o /enki
+COPY --from=base . /rootfs
 
-FROM gcr.io/kaniko-project/executor:latest
+FROM rootfs
+# Additional os specific things
 
-COPY --from=builder /enki /enki
+RUN echo "nameserver 8.8.8.8" > /rootfs/etc/resolv.conf
+RUN cat /rootfs/etc/resolv.conf
 
-ENTRYPOINT ["/enki"]
+FROM scratch as rootfs
 
-CMD ["convert"]
+COPY --from=builder /rootfs/ .
+
+FROM rootfs
+# Additional os specific things
+

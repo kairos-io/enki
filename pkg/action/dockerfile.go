@@ -1,6 +1,9 @@
 package action
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // ConverterAction is the action that converts a non-kairos image to a Kairos one.
 // The conversion happens in a best-effort manner. It's not guaranteed that
@@ -21,9 +24,72 @@ func NewDockerfileAction(rootfsPath, baseImageURI string) *DockerfileAction {
 }
 
 func (a *DockerfileAction) Run() (dockerfile string, err error) {
-	if a.rootFSPath != "" && a.baseImageURI != "" {
-		return "", errors.New("only one of 'rootfs-dir' and 'base-image-uri' should be defined")
+	if err := a.Validate(); err != nil {
+		return "", err
 	}
 
-	return "", nil
+	dockerfile = ""
+	dockerfile += a.baseImageSection()
+	dockerfile += a.dnsSection()
+	dockerfile += a.footerSection()
+	dockerfile += a.osSpecificSection()
+
+	return dockerfile, nil
+}
+
+func (a *DockerfileAction) baseImageSection() string {
+	result := ""
+	if a.baseImageURI != "" {
+		return fmt.Sprintf(`
+FROM %s as base
+FROM busybox as builder
+
+COPY --from=base . /rootfs
+
+FROM rootfs
+# Additional os specific things
+`, a.baseImageURI)
+	}
+
+	result = fmt.Sprintf(`
+FROM busybox as builder
+RUN mkdir /rootfs
+COPY %s /rootfs/.
+
+FROM rootfs
+# Additional os specific things
+`, a.rootFSPath)
+
+	return result
+}
+
+func (a *DockerfileAction) dnsSection() string {
+	return `
+RUN echo "nameserver 8.8.8.8" > /rootfs/etc/resolv.conf
+RUN cat /rootfs/etc/resolv.conf
+`
+}
+
+func (a *DockerfileAction) footerSection() string {
+	return `
+FROM scratch as rootfs
+
+COPY --from=builder /rootfs/ .
+`
+}
+
+func (a *DockerfileAction) osSpecificSection() string {
+	return `
+FROM rootfs
+# Additional os specific things
+`
+}
+
+func (a *DockerfileAction) Validate() error {
+	if a.rootFSPath != "" && a.baseImageURI != "" ||
+		a.rootFSPath == "" && a.baseImageURI == "" {
+		return errors.New("exactly one of 'rootfs-dir' and 'base-image-uri' should be defined")
+	}
+
+	return nil
 }

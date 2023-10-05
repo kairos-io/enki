@@ -55,9 +55,10 @@ func NewConverterAction(rootfsPath, resultPath, imageName string, runner Runner)
 // E.g.
 // CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o build/enki && docker run -it -e PATH=/kaniko -v /tmp -v /home/dimitris/workspace/kairos/osbuilder/tmp/rootfs/:/context -v "$PWD/build/enki":/enki -v $PWD:/build --rm --entrypoint "/enki" gcr.io/kaniko-project/executor:latest convert /context
 func (ca *ConverterAction) Run() (err error) {
-	dockerfile, err := ca.createDockerfile()
+	da := NewDockerfileAction(ca.rootFSPath, "")
+	dockerfile, err := da.Run()
 	if err != nil {
-		return
+		return err
 	}
 	defer os.Remove(dockerfile)
 
@@ -73,40 +74,6 @@ func (ca *ConverterAction) Run() (err error) {
 	}
 
 	return
-}
-
-func (ca *ConverterAction) createDockerfile() (string, error) {
-	f, err := os.CreateTemp("", "")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	// write data to the temporary file
-	data := []byte(`
-FROM busybox as builder
-RUN mkdir /rootfs
-COPY . /rootfs/.
-
-RUN echo "nameserver 8.8.8.8" > /rootfs/etc/resolv.conf
-RUN cat /rootfs/etc/resolv.conf
-
-FROM scratch as rootfs
-
-COPY --from=builder /rootfs/ .
-
-FROM rootfs
-
-# TODO: Do more clever things
-RUN apt-get update && apt-get install -y curl
-`)
-
-	if _, err := f.Write(data); err != nil {
-		os.Remove(f.Name())
-		return "", err
-	}
-
-	return f.Name(), nil
 }
 
 // https://github.com/GoogleContainerTools/kaniko/issues/1007

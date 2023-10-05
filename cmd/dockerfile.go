@@ -16,9 +16,9 @@ func NewDockerfileCmd() *cobra.Command {
 		Long: "Create a dockerfile that builds a Kairos image from the provided one\n\n" +
 			"The base image can be specified either as a directory where the image has been extracted or as an image uri.\n" +
 			"This is best effort. Enki will try to detect the distribution and add the necessary bits to convert it to a Kairos image",
-		Args: cobra.ExactArgs(3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			return CheckRoot() // TODO: Do we need root?
+			//return CheckRoot() // TODO: Do we need root?
+			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
