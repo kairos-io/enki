@@ -40,7 +40,17 @@ func NewDockerfileCmd() *cobra.Command {
 				return err
 			}
 
-			a := action.NewDockerfileAction(rootfsDir, baseImageURI, frameworkImage)
+			osReleaseVarsPath, err := cmd.Flags().GetString("os-release-vars-path")
+			if err != nil {
+				return err
+			}
+
+			a := action.DockerfileAction{
+				RootFSPath:        rootfsDir,
+				BaseImageURI:      baseImageURI,
+				FrameworkImage:    frameworkImage,
+				OSReleaseVarsPath: osReleaseVarsPath,
+			}
 			dockerfile, err := a.Run()
 			if err != nil {
 				return err
@@ -61,4 +71,5 @@ func init() {
 	c.Flags().StringP("rootfs-dir", "r", "", "the directory containing the extracted base image rootfs")
 	c.Flags().StringP("base-image-uri", "b", "", "the URI of the base image")
 	c.Flags().StringP("framework-image", "i", "", "the URI of the base image")
+	c.Flags().StringP("os-release-vars-path", "o", "", "the path to additional os-release vars for the generated image [Optional] ")
 }

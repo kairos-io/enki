@@ -57,7 +57,10 @@ func NewConverterAction(rootfsPath, resultPath, imageName, frameworkImage string
 // E.g.
 // CGO_ENABLED=0 go build -ldflags '-extldflags "-static"' -o build/enki && docker run -it -e PATH=/kaniko -v /tmp -v /home/dimitris/workspace/kairos/osbuilder/tmp/rootfs/:/context -v "$PWD/build/enki":/enki -v $PWD:/build --rm --entrypoint "/enki" gcr.io/kaniko-project/executor:latest convert /context
 func (ca *ConverterAction) Run() (err error) {
-	da := NewDockerfileAction(ca.rootFSPath, "", ca.frameworkImage)
+	da := DockerfileAction{
+		RootFSPath:     ca.rootFSPath,
+		FrameworkImage: ca.frameworkImage,
+	}
 	dockerfile, err := da.Run()
 	if err != nil {
 		return err

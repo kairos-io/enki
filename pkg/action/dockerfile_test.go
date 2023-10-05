@@ -13,7 +13,11 @@ var _ = Describe("DockerfileAction", func() {
 
 	When("both a rootfs dir and a base image URI are defined", func() {
 		BeforeEach(func() {
-			action = NewDockerfileAction("somedir", "quay.io/kairos/someimage", "quay.io/kairos/framework:master_ubuntu")
+			action = &DockerfileAction{
+				RootFSPath:     "somedir",
+				BaseImageURI:   "quay.io/kairos/someimage",
+				FrameworkImage: "quay.io/kairos/framework:master_ubuntu",
+			}
 		})
 
 		It("returns an error", func() {
@@ -28,7 +32,10 @@ var _ = Describe("DockerfileAction", func() {
 
 			BeforeEach(func() {
 				rootfsPath = prepareEmptyRootfs()
-				action = NewDockerfileAction(rootfsPath, "", "quay.io/kairos/framework:master_ubuntu")
+				action = &DockerfileAction{
+					RootFSPath:     rootfsPath,
+					FrameworkImage: "quay.io/kairos/framework:master_ubuntu",
+				}
 			})
 
 			AfterEach(func() {
@@ -45,7 +52,10 @@ var _ = Describe("DockerfileAction", func() {
 
 		When("a base image uri is defined", func() {
 			BeforeEach(func() {
-				action = NewDockerfileAction("", "ubuntu:latest", "quay.io/kairos/framework:master_ubuntu")
+				action = &DockerfileAction{
+					BaseImageURI:   "ubuntu:latest",
+					FrameworkImage: "quay.io/kairos/framework:master_ubuntu",
+				}
 			})
 
 			It("starts with the provided base image", func() {
@@ -58,12 +68,27 @@ var _ = Describe("DockerfileAction", func() {
 	})
 
 	Describe("adding kairos bits", func() {
+		var osReleaseVarsFile string
+
+		BeforeEach(func() {
+			osReleaseVarsFile = createOsReleaseVarsFile("MYVAR=MYVAL")
+
+			action = &DockerfileAction{
+				FrameworkImage:    "quay.io/kairos/framework:master_ubuntu",
+				OSReleaseVarsPath: osReleaseVarsFile,
+			}
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(osReleaseVarsFile)).ToNot(HaveOccurred())
+		})
+
 		When("rootfs dir is defined", func() {
 			var rootfsPath string
 
 			BeforeEach(func() {
 				rootfsPath = prepareRootfsFromImage("ubuntu:latest")
-				action = NewDockerfileAction(rootfsPath, "", "quay.io/kairos/framework:master_ubuntu")
+				action.RootFSPath = rootfsPath
 			})
 
 			AfterEach(func() {
@@ -77,7 +102,7 @@ var _ = Describe("DockerfileAction", func() {
 
 		When("base image URI is defined", func() {
 			BeforeEach(func() {
-				action = NewDockerfileAction("", "ubuntu:latest", "quay.io/kairos/framework:master_ubuntu")
+				action.BaseImageURI = "ubuntu:latest"
 			})
 
 			It("adds Kairos bits", func() {
@@ -93,6 +118,7 @@ func checkForKairosBits(action *DockerfileAction) {
 
 	dockerfileMustHaveLuet(dockerfile)
 	dockerfileMustInstallFramework(dockerfile)
+	dockerfileMustIncludeAdditionalOSRelaseVars(dockerfile)
 }
 
 func dockerfileMustHaveLuet(d string) {
@@ -103,4 +129,18 @@ func dockerfileMustHaveLuet(d string) {
 func dockerfileMustInstallFramework(d string) {
 	By("checking installation of framework bits")
 	Expect(d).To(MatchRegexp("COPY --from=quay.io/kairos/framework"))
+}
+
+func dockerfileMustIncludeAdditionalOSRelaseVars(d string) {
+	By("checking /etc/os-release vars")
+	Expect(d).To(MatchRegexp("/etc/os-release\nMYVAR=MYVAL"))
+}
+
+func createOsReleaseVarsFile(content string) string {
+	file, err := os.CreateTemp("", "kairos-os-release-")
+	Expect(err).ToNot(HaveOccurred())
+	_, err = file.Write([]byte("MYVAR=MYVAL"))
+	Expect(err).ToNot(HaveOccurred())
+
+	return file.Name()
 }
