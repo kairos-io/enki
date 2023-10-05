@@ -1,4 +1,4 @@
-ARG GO_VERSION=1.20-alpine3.18
+ARG GO_VERSION=1.21-alpine3.18
 FROM golang:$GO_VERSION AS builder
 
 WORKDIR /build
