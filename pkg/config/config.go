@@ -3,8 +3,10 @@ package config
 import (
 	"github.com/kairos-io/enki/internal/version"
 	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/kairos-agent/v2/pkg/cloudinit"
+	"github.com/kairos-io/kairos-agent/v2/pkg/config"
 	"github.com/kairos-io/kairos-agent/v2/pkg/http"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/mitchellh/mapstructure"
@@ -29,72 +31,72 @@ var decodeHook = viper.DecodeHook(
 	),
 )
 
-func WithFs(fs v1.FS) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithFs(fs v1.FS) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Fs = fs
 		return nil
 	}
 }
 
-func WithLogger(logger v1.Logger) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithLogger(logger v1.Logger) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Logger = logger
 		return nil
 	}
 }
 
-func WithSyscall(syscall v1.SyscallInterface) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithSyscall(syscall v1.SyscallInterface) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Syscall = syscall
 		return nil
 	}
 }
 
-func WithMounter(mounter mount.Interface) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithMounter(mounter mount.Interface) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Mounter = mounter
 		return nil
 	}
 }
 
-func WithRunner(runner v1.Runner) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithRunner(runner v1.Runner) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Runner = runner
 		return nil
 	}
 }
 
-func WithClient(client v1.HTTPClient) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithClient(client v1.HTTPClient) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Client = client
 		return nil
 	}
 }
 
-func WithCloudInitRunner(ci v1.CloudInitRunner) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithCloudInitRunner(ci v1.CloudInitRunner) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.CloudInitRunner = ci
 		return nil
 	}
 }
 
-func WithArch(arch string) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithArch(arch string) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.Arch = arch
 		return nil
 	}
 }
 
-func WithImageExtractor(extractor v1.ImageExtractor) func(r *v1.Config) error {
-	return func(r *v1.Config) error {
+func WithImageExtractor(extractor v1.ImageExtractor) func(r *config.Config) error {
+	return func(r *config.Config) error {
 		r.ImageExtractor = extractor
 		return nil
 	}
 }
 
-type GenericOptions func(a *v1.Config) error
+type GenericOptions func(a *config.Config) error
 
-func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Interface) (*v1.BuildConfig, error) {
+func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Interface) (*types.BuildConfig, error) {
 	logger := v1.NewLogger()
 	if configDir == "" {
 		configDir = "."
@@ -127,7 +129,7 @@ func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Inter
 	return cfg, err
 }
 
-func ReadBuildISO(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.LiveISO, error) {
+func ReadBuildISO(b *types.BuildConfig, flags *pflag.FlagSet) (*types.LiveISO, error) {
 	iso := NewISO()
 	vp := viper.Sub("iso")
 	if vp == nil {
@@ -145,8 +147,8 @@ func ReadBuildISO(b *v1.BuildConfig, flags *pflag.FlagSet) (*v1.LiveISO, error) 
 	return iso, err
 }
 
-func NewISO() *v1.LiveISO {
-	return &v1.LiveISO{
+func NewISO() *types.LiveISO {
+	return &types.LiveISO{
 		Label:     constants.ISOLabel,
 		GrubEntry: constants.GrubDefEntry,
 		UEFI:      []*v1.ImageSource{},
@@ -154,15 +156,15 @@ func NewISO() *v1.LiveISO {
 	}
 }
 
-func NewBuildConfig(opts ...GenericOptions) *v1.BuildConfig {
-	b := &v1.BuildConfig{
+func NewBuildConfig(opts ...GenericOptions) *types.BuildConfig {
+	b := &types.BuildConfig{
 		Config: *NewConfig(opts...),
 		Name:   constants.BuildImgName,
 	}
 	return b
 }
 
-func NewConfig(opts ...GenericOptions) *v1.Config {
+func NewConfig(opts ...GenericOptions) *config.Config {
 	log := v1.NewLogger()
 	arch, err := utils.GolangArchToArch(runtime.GOARCH)
 	if err != nil {
@@ -170,12 +172,11 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 		return nil
 	}
 
-	c := &v1.Config{
+	c := &config.Config{
 		Fs:                    vfs.OSFS,
 		Logger:                log,
 		Syscall:               &v1.RealSyscall{},
 		Client:                http.NewClient(),
-		Repos:                 []v1.Repository{},
 		Arch:                  arch,
 		SquashFsNoCompression: true,
 	}

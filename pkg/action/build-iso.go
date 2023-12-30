@@ -2,25 +2,26 @@ package action
 
 import (
 	"fmt"
+	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"path/filepath"
 	"time"
 
 	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
-	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	sdk "github.com/kairos-io/kairos-sdk/utils"
 )
 
 type BuildISOAction struct {
-	cfg  *v1.BuildConfig
-	spec *v1.LiveISO
+	cfg  *types.BuildConfig
+	spec *types.LiveISO
 	e    *elemental.Elemental
 }
 
 type BuildISOActionOption func(a *BuildISOAction)
 
-func NewBuildISOAction(cfg *v1.BuildConfig, spec *v1.LiveISO, opts ...BuildISOActionOption) *BuildISOAction {
+func NewBuildISOAction(cfg *types.BuildConfig, spec *types.LiveISO, opts ...BuildISOActionOption) *BuildISOAction {
 	b := &BuildISOAction{
 		cfg:  cfg,
 		e:    elemental.NewElemental(&cfg.Config),
@@ -143,6 +144,8 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 
 func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	var err error
+	var fallBackShim string
+	var fallBackGrub = filepath.Join(rootdir, "/efi", "grub.efi")
 	img := filepath.Join(isoDir, constants.IsoEFIPath)
 	temp, _ := utils.TempDir(b.cfg.Fs, "", "enki-iso")
 	utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
@@ -157,8 +160,10 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	switch b.cfg.Arch {
 	case constants.ArchAmd64, constants.Archx86:
 		shimDest = filepath.Join(temp, constants.ShimEfiDest)
+		fallBackShim = filepath.Join(rootdir, "/efi", "bootx64.efi")
 	case constants.ArchArm64:
 		shimDest = filepath.Join(temp, constants.ShimEfiArmDest)
+		fallBackShim = filepath.Join(rootdir, "/efi", "bootaa64.efi")
 	default:
 		err = fmt.Errorf("not supported architecture: %v", b.cfg.Arch)
 	}
@@ -184,8 +189,18 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		break
 	}
 	if !shimDone {
-		b.cfg.Logger.Debugf("List of shim files searched for in %s: %s", rootdir, shimFiles)
-		return fmt.Errorf("could not find any shim file to copy")
+		// All failed...maybe we are on alpine which doesnt provide shim/grub.efi ?
+		// In that case, we can just use the luet packaged artifacts
+		err = utils.CopyFile(
+			b.cfg.Fs,
+			fallBackShim,
+			shimDest,
+		)
+		if err != nil {
+			b.cfg.Logger.Debugf("List of shim files searched for in %s: %s", rootdir, shimFiles)
+			return fmt.Errorf("could not find any shim file to copy")
+		}
+		b.cfg.Logger.Debugf("Using fallback shim file %s", fallBackShim)
 	}
 
 	grubDone := false
@@ -212,8 +227,18 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		break
 	}
 	if !grubDone {
-		b.cfg.Logger.Debugf("List of grub files searched for: %s", grubFiles)
-		return fmt.Errorf("could not find any grub efi file to copy")
+		// All failed...maybe we are on alpine which doesnt provide shim/grub.efi ?
+		// In that case, we can just use the luet packaged artifacts
+		err = utils.CopyFile(
+			b.cfg.Fs,
+			fallBackGrub,
+			filepath.Join(temp, "EFI/BOOT/grub.efi"),
+		)
+		if err != nil {
+			b.cfg.Logger.Debugf("List of grub files searched for: %s", grubFiles)
+			return fmt.Errorf("could not find any grub efi file to copy")
+		}
+		b.cfg.Logger.Debugf("Using fallback grub file %s", fallBackGrub)
 	}
 
 	// Generate grub cfg that chainloads into the default livecd grub under /boot/grub2/grub.cfg
