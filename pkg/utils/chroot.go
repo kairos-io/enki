@@ -24,7 +24,7 @@ import (
 	"strings"
 
 	"github.com/kairos-io/enki/pkg/constants"
-	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	cfg "github.com/kairos-io/kairos-agent/v2/pkg/config"
 )
 
 // Chroot represents the struct that will allow us to run commands inside a given chroot
@@ -33,10 +33,10 @@ type Chroot struct {
 	defaultMounts []string
 	extraMounts   map[string]string
 	activeMounts  []string
-	config        *v1.Config
+	config        *cfg.Config
 }
 
-func NewChroot(path string, config *v1.Config) *Chroot {
+func NewChroot(path string, config *cfg.Config) *Chroot {
 	return &Chroot{
 		path:          path,
 		defaultMounts: []string{"/dev", "/dev/pts", "/proc", "/sys"},
@@ -47,7 +47,7 @@ func NewChroot(path string, config *v1.Config) *Chroot {
 }
 
 // ChrootedCallback runs the given callback in a chroot environment
-func ChrootedCallback(cfg *v1.Config, path string, bindMounts map[string]string, callback func() error) error {
+func ChrootedCallback(cfg *cfg.Config, path string, bindMounts map[string]string, callback func() error) error {
 	chroot := NewChroot(path, cfg)
 	chroot.SetExtraMounts(bindMounts)
 	return chroot.RunCallback(callback)
