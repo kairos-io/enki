@@ -145,7 +145,9 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	var err error
 	var fallBackShim string
-	var fallBackGrub = filepath.Join(rootdir, "/efi", "grub.efi")
+	// rootfs /efi dir
+	// this is shipped usually with osbuilder and the files come from livecd/grub2-efi-artifacts
+	var fallBackGrub = filepath.Join("/efi", constants.EfiBootPath, "grub.efi")
 	img := filepath.Join(isoDir, constants.IsoEFIPath)
 	temp, _ := utils.TempDir(b.cfg.Fs, "", "enki-iso")
 	utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
@@ -160,10 +162,10 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	switch b.cfg.Arch {
 	case constants.ArchAmd64, constants.Archx86:
 		shimDest = filepath.Join(temp, constants.ShimEfiDest)
-		fallBackShim = filepath.Join(rootdir, "/efi", "bootx64.efi")
+		fallBackShim = filepath.Join("/efi", constants.EfiBootPath, "bootx64.efi")
 	case constants.ArchArm64:
 		shimDest = filepath.Join(temp, constants.ShimEfiArmDest)
-		fallBackShim = filepath.Join(rootdir, "/efi", "bootaa64.efi")
+		fallBackShim = filepath.Join("/efi", constants.EfiBootPath, "bootaa64.efi")
 	default:
 		err = fmt.Errorf("not supported architecture: %v", b.cfg.Arch)
 	}
@@ -172,7 +174,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	for _, f := range shimFiles {
 		_, err := b.cfg.Fs.Stat(filepath.Join(rootdir, f))
 		if err != nil {
-			b.cfg.Logger.Warnf("skip copying %s: %s", filepath.Join(rootdir, f), err)
+			b.cfg.Logger.Debugf("skip copying %s: not found", filepath.Join(rootdir, f))
 			continue
 		}
 		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), shimDest)
@@ -207,7 +209,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	for _, f := range grubFiles {
 		stat, err := b.cfg.Fs.Stat(filepath.Join(rootdir, f))
 		if err != nil {
-			b.cfg.Logger.Warnf("skip copying %s: %s", filepath.Join(rootdir, f), err)
+			b.cfg.Logger.Debugf("skip copying %s: not found", filepath.Join(rootdir, f))
 			continue
 		}
 		// Same name as the source, shim looks for that name.
