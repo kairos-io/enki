@@ -113,6 +113,13 @@ var _ = Describe("BuildISOAction", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = fs.Create(filepath.Join(bootDir, "initrd"))
 			Expect(err).ShouldNot(HaveOccurred())
+			// Create shim and efi fake files
+			err = utils.MkdirAll(fs, filepath.Join(bootDir, "efi", "EFI", "fedora"), constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "shim.efi"))
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "grubx64.efi"))
+			Expect(err).ShouldNot(HaveOccurred())
 
 			buildISO := action.NewBuildISOAction(cfg, iso)
 			err = buildISO.ISORun()
@@ -178,6 +185,13 @@ var _ = Describe("BuildISOAction", func() {
 			_, err = fs.Create(filepath.Join(bootDir, "vmlinuz"))
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = fs.Create(filepath.Join(bootDir, "initrd"))
+			Expect(err).ShouldNot(HaveOccurred())
+			// Create shim and efi fake files
+			err = utils.MkdirAll(fs, filepath.Join(bootDir, "efi", "EFI", "fedora"), constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "shim.efi"))
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "grubx64.efi"))
 			Expect(err).ShouldNot(HaveOccurred())
 
 			runner.SideEffect = func(command string, args ...string) ([]byte, error) {
