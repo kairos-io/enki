@@ -4,6 +4,7 @@ import (
 	"fmt"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/kairos-io/enki/pkg/constants"
@@ -205,6 +206,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		b.cfg.Logger.Debugf("Using fallback shim file %s", fallBackShim)
 		// Also copy the shim.efi file into the rootfs so the installer can find it. Side effect of
 		// alpine not providing shim/grub.efi and we not providing it from packages anymore
+		utils.MkdirAll(b.cfg.Fs, filepath.Join(rootdir, filepath.Dir(shimFiles[0])), constants.DirPerm)
 		err = utils.CopyFile(
 			b.cfg.Fs,
 			fallBackShim,
@@ -224,7 +226,9 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 			continue
 		}
 		// Same name as the source, shim looks for that name.
-		nameDest := filepath.Join(temp, "EFI/BOOT", stat.Name())
+		// remove the .signed suffix if present
+		name, _ := strings.CutSuffix(stat.Name(), ".signed")
+		nameDest := filepath.Join(temp, "EFI/BOOT", name)
 		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), nameDest)
 
 		err = utils.CopyFile(
@@ -254,6 +258,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		b.cfg.Logger.Debugf("Using fallback grub file %s", fallBackGrub)
 		// Also copy the grub.efi file into the rootfs so the installer can find it. Side effect of
 		// alpine not providing shim/grub.efi and we not providing it from packages anymore
+		utils.MkdirAll(b.cfg.Fs, filepath.Join(rootdir, filepath.Dir(grubFiles[0])), constants.DirPerm)
 		err = utils.CopyFile(
 			b.cfg.Fs,
 			fallBackGrub,
