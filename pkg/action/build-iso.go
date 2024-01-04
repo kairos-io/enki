@@ -203,6 +203,17 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 			return fmt.Errorf("could not find any shim file to copy")
 		}
 		b.cfg.Logger.Debugf("Using fallback shim file %s", fallBackShim)
+		// Also copy the shim.efi file into the rootfs so the installer can find it. Side effect of
+		// alpine not providing shim/grub.efi and we not providing it from packages anymore
+		err = utils.CopyFile(
+			b.cfg.Fs,
+			fallBackShim,
+			filepath.Join(rootdir, shimFiles[0]),
+		)
+		if err != nil {
+			b.cfg.Logger.Debugf("Could not copy fallback shim into rootfs from %s to %s", fallBackShim, filepath.Join(rootdir, shimFiles[0]))
+			return fmt.Errorf("could not copy fallback shim into rootfs from %s to %s", fallBackShim, filepath.Join(rootdir, shimFiles[0]))
+		}
 	}
 
 	grubDone := false
@@ -241,6 +252,17 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 			return fmt.Errorf("could not find any grub efi file to copy")
 		}
 		b.cfg.Logger.Debugf("Using fallback grub file %s", fallBackGrub)
+		// Also copy the grub.efi file into the rootfs so the installer can find it. Side effect of
+		// alpine not providing shim/grub.efi and we not providing it from packages anymore
+		err = utils.CopyFile(
+			b.cfg.Fs,
+			fallBackGrub,
+			filepath.Join(rootdir, grubFiles[0]),
+		)
+		if err != nil {
+			b.cfg.Logger.Debugf("Could not copy fallback grub into rootfs from %s to %s", fallBackGrub, filepath.Join(rootdir, grubFiles[0]))
+			return fmt.Errorf("could not copy fallback shim into rootfs from %s to %s", fallBackGrub, filepath.Join(rootdir, grubFiles[0]))
+		}
 	}
 
 	// Generate grub cfg that chainloads into the default livecd grub under /boot/grub2/grub.cfg
