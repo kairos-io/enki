@@ -7,76 +7,22 @@ import (
 )
 
 const (
-	GrubDefEntry          = "Kairos"
-	EfiLabel              = "COS_GRUB"
-	ISOLabel              = "COS_LIVE"
-	MountBinary           = "/usr/bin/mount"
-	EfiFs                 = "vfat"
-	IsoRootFile           = "rootfs.squashfs"
-	IsoEFIPath            = "/boot/uefi.img"
-	BuildImgName          = "elemental"
-	EfiBootPath           = "/EFI/BOOT"
-	GrubEfiImagex86       = "/usr/share/grub2/x86_64-efi/grub.efi"
-	GrubEfiImageArm64     = "/usr/share/grub2/arm64-efi/grub.efi"
-	GrubEfiImagex86Dest   = EfiBootPath + "/bootx64.efi"
-	GrubEfiImageArm64Dest = EfiBootPath + "/bootaa64.efi"
-	GrubCfg               = "grub.cfg"
-	GrubPrefixDir         = "/boot/grub2"
-	GrubEfiCfg            = "search --no-floppy --file --set=root " + IsoKernelPath +
+	GrubDefEntry   = "Kairos"
+	EfiLabel       = "COS_GRUB"
+	ISOLabel       = "COS_LIVE"
+	MountBinary    = "/usr/bin/mount"
+	EfiFs          = "vfat"
+	IsoRootFile    = "rootfs.squashfs"
+	IsoEFIPath     = "/boot/uefi.img"
+	BuildImgName   = "elemental"
+	EfiBootPath    = "/EFI/BOOT"
+	ShimEfiDest    = EfiBootPath + "/bootx64.efi"
+	ShimEfiArmDest = EfiBootPath + "/bootaa64.efi"
+	GrubCfg        = "grub.cfg"
+	GrubPrefixDir  = "/boot/grub2"
+	GrubEfiCfg     = "search --no-floppy --file --set=root " + IsoKernelPath +
 		"\nset prefix=($root)" + GrubPrefixDir +
 		"\nconfigfile $prefix/" + GrubCfg
-
-	GrubFont          = "/usr/share/grub2/unicode.pf2"
-	GrubBootHybridImg = "/usr/share/grub2/i386-pc/boot_hybrid.img"
-	SyslinuxFiles     = "/usr/share/syslinux/isolinux.bin " +
-		"/usr/share/syslinux/menu.c32 " +
-		"/usr/share/syslinux/chain.c32 " +
-		"/usr/share/syslinux/mboot.c32"
-	IsoLoaderPath   = "/boot/x86_64/loader"
-	GrubCfgTemplate = `search --no-floppy --file --set=root /boot/kernel                               
-	set default=0                                                                   
-	set timeout=10                                                                  
-	set timeout_style=menu                                                          
-	set linux=linux                                                                 
-	set initrd=initrd                                                               
-	if [ "${grub_cpu}" = "x86_64" -o "${grub_cpu}" = "i386" -o "${grub_cpu}" = "arm64" ];then
-		if [ "${grub_platform}" = "efi" ]; then                                     
-			if [ "${grub_cpu}" != "arm64" ]; then                                   
-				set linux=linuxefi                                                  
-				set initrd=initrdefi                                                
-			fi                                                                      
-		fi                                                                          
-	fi                                                                              
-	if [ "${grub_platform}" = "efi" ]; then                                         
-		echo "Please press 't' to show the boot menu on this console"               
-	fi                                                                              
-	set font=($root)/boot/${grub_cpu}/loader/grub2/fonts/unicode.pf2                
-	if [ -f ${font} ];then                                                          
-		loadfont ${font}                                                            
-	fi                                                                              
-	menuentry "%s" --class os --unrestricted {                                     
-		echo Loading kernel...                                                      
-		$linux ($root)/boot/kernel cdroot root=live:CDLABEL=%s rd.live.dir=/ rd.live.squashimg=rootfs.squashfs rd.live.overlay.overlayfs console=ttyS0 console=tty1 rd.cos.disable
-		echo Loading initrd...                                                      
-		$initrd ($root)/boot/initrd                                                 
-	}                                                                               
-																					
-	if [ "${grub_platform}" = "efi" ]; then                                         
-		hiddenentry "Text mode" --hotkey "t" {                                      
-			set textmode=true                                                       
-			terminal_output console                                                 
-		}                                                                           
-	fi`
-	GrubBiosTarget  = "i386-pc"
-	GrubI386BinDir  = "/usr/share/grub2/i386-pc"
-	GrubBiosImg     = GrubI386BinDir + "/core.img"
-	GrubBiosCDBoot  = GrubI386BinDir + "/cdboot.img"
-	GrubEltoritoImg = GrubI386BinDir + "/eltorito.img"
-	//TODO this list could be optimized
-	GrubModules = "ext2 iso9660 linux echo configfile search_label search_fs_file search search_fs_uuid " +
-		"ls normal gzio png fat gettext font minicmd gfxterm gfxmenu all_video xfs btrfs lvm luks " +
-		"gcry_rijndael gcry_sha256 gcry_sha512 crypto cryptodisk test true loadenv part_gpt " +
-		"part_msdos biosdisk vga vbe chain boot"
 
 	IsoHybridMBR   = "/boot/x86_64/loader/boot_hybrid.img"
 	IsoBootCatalog = "/boot/x86_64/boot.catalog"
