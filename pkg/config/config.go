@@ -208,6 +208,7 @@ func NewConfig(opts ...GenericOptions) *v1.Config {
 	if c.Mounter == nil {
 		c.Mounter = mount.New(constants.MountBinary)
 	}
+	litter.Config.HidePrivateFields = false
 
 	return c
 }

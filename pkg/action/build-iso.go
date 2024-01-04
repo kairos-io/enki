@@ -3,7 +3,6 @@ package action
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/kairos-io/enki/pkg/constants"
@@ -82,13 +81,6 @@ func (b *BuildISOAction) ISORun() (err error) {
 		return err
 	}
 
-	b.cfg.Logger.Infof("Preparing EFI image...")
-	err = b.applySources(uefiDir, b.spec.UEFI...)
-	if err != nil {
-		b.cfg.Logger.Errorf("Failed installing EFI packages: %v", err)
-		return err
-	}
-
 	b.cfg.Logger.Infof("Preparing ISO image root tree...")
 	err = b.applySources(isoDir, b.spec.Image...)
 	if err != nil {
@@ -142,19 +134,99 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 	}
 
 	b.cfg.Logger.Info("Creating EFI image...")
-	err = b.createEFI(uefiDir, filepath.Join(isoDir, constants.IsoEFIPath))
+	err = b.createEFI(rootDir, isoDir)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (b BuildISOAction) createEFI(root string, img string) error {
-	efiSize, err := utils.DirSize(b.cfg.Fs, root)
+func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
+	var err error
+	img := filepath.Join(isoDir, constants.IsoEFIPath)
+	temp, _ := utils.TempDir(b.cfg.Fs, "", "enki-iso")
+	utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
+	utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, constants.EfiBootPath), constants.DirPerm)
+	// Get possible shim file paths
+	shimFiles := sdk.GetEfiShimFiles(b.cfg.Arch)
+	// Get possible grub file paths
+	grubFiles := sdk.GetEfiGrubFiles(b.cfg.Arch)
+
+	// Calculate shim path based on arch
+	var shimDest string
+	switch b.cfg.Arch {
+	case constants.ArchAmd64, constants.Archx86:
+		shimDest = filepath.Join(temp, constants.ShimEfiDest)
+	case constants.ArchArm64:
+		shimDest = filepath.Join(temp, constants.ShimEfiArmDest)
+	default:
+		err = fmt.Errorf("not supported architecture: %v", b.cfg.Arch)
+	}
+
+	shimDone := false
+	for _, f := range shimFiles {
+		_, err := b.cfg.Fs.Stat(filepath.Join(rootdir, f))
+		if err != nil {
+			b.cfg.Logger.Warnf("skip copying %s: %s", filepath.Join(rootdir, f), err)
+			continue
+		}
+		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), shimDest)
+		err = utils.CopyFile(
+			b.cfg.Fs,
+			filepath.Join(rootdir, f),
+			shimDest,
+		)
+		if err != nil {
+			b.cfg.Logger.Warnf("error reading %s: %s", filepath.Join(rootdir, f), err)
+			continue
+		}
+		shimDone = true
+		break
+	}
+	if !shimDone {
+		b.cfg.Logger.Debugf("List of shim files searched for in %s: %s", rootdir, shimFiles)
+		return fmt.Errorf("could not find any shim file to copy")
+	}
+
+	grubDone := false
+	for _, f := range grubFiles {
+		stat, err := b.cfg.Fs.Stat(filepath.Join(rootdir, f))
+		if err != nil {
+			b.cfg.Logger.Warnf("skip copying %s: %s", filepath.Join(rootdir, f), err)
+			continue
+		}
+		// Same name as the source, shim looks for that name.
+		nameDest := filepath.Join(temp, "EFI/BOOT", stat.Name())
+		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), nameDest)
+
+		err = utils.CopyFile(
+			b.cfg.Fs,
+			filepath.Join(rootdir, f),
+			nameDest,
+		)
+		if err != nil {
+			b.cfg.Logger.Warnf("error reading %s: %s", filepath.Join(rootdir, f), err)
+			continue
+		}
+		grubDone = true
+		break
+	}
+	if !grubDone {
+		b.cfg.Logger.Debugf("List of grub files searched for: %s", grubFiles)
+		return fmt.Errorf("could not find any grub efi file to copy")
+	}
+
+	// Generate grub cfg that chainloads into the default livecd grub under /boot/grub2/grub.cfg
+	// Its read from the root of the livecd, so we need to copy it into /EFI/BOOT/grub.cfg
+	// This is due to the hybrid bios/efi boot mode of the livecd
+	// the uefi.img is loaded into memory and run, but grub only sees the livecd root
+	b.cfg.Fs.WriteFile(filepath.Join(isoDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+
+	// Calculate EFI image size based on artifacts
+	efiSize, err := utils.DirSize(b.cfg.Fs, temp)
 	if err != nil {
 		return err
 	}
-
 	// align efiSize to the next 4MB slot
 	align := int64(4 * 1024 * 1024)
 	efiSizeMB := (efiSize/align*align + align) / (1024 * 1024)
@@ -168,14 +240,17 @@ func (b BuildISOAction) createEFI(root string, img string) error {
 	if err != nil {
 		return err
 	}
+	b.cfg.Logger.Debugf("EFI image created at %s", img)
 
-	files, err := b.cfg.Fs.ReadDir(root)
+	files, err := b.cfg.Fs.ReadDir(temp)
 	if err != nil {
 		return err
 	}
 
 	for _, f := range files {
-		_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(root, f.Name()), "::")
+		// This copies the efi files into the efi img used for the boot
+		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(temp, f.Name()), img)
+		_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(temp, f.Name()), "::")
 		if err != nil {
 			return err
 		}
@@ -241,120 +316,4 @@ func (b BuildISOAction) applySources(target string, sources ...*v1.ImageSource) 
 		}
 	}
 	return nil
-}
-
-func (g *BuildISOAction) PrepareEFI(rootDir, uefiDir string) error {
-	err := utils.MkdirAll(g.cfg.Fs, filepath.Join(uefiDir, constants.EfiBootPath), constants.DirPerm)
-	if err != nil {
-		return err
-	}
-
-	switch g.cfg.Arch {
-	case constants.ArchAmd64, constants.Archx86:
-		err = utils.CopyFile(
-			g.cfg.Fs,
-			filepath.Join(rootDir, constants.GrubEfiImagex86),
-			filepath.Join(uefiDir, constants.GrubEfiImagex86Dest),
-		)
-	case constants.ArchArm64:
-		err = utils.CopyFile(
-			g.cfg.Fs,
-			filepath.Join(rootDir, constants.GrubEfiImageArm64),
-			filepath.Join(uefiDir, constants.GrubEfiImageArm64Dest),
-		)
-	default:
-		err = fmt.Errorf("Not supported architecture: %v", g.cfg.Arch)
-	}
-	if err != nil {
-		return err
-	}
-
-	return g.cfg.Fs.WriteFile(filepath.Join(uefiDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
-}
-
-func (g *BuildISOAction) PrepareISO(rootDir, imageDir string) error {
-
-	err := utils.MkdirAll(g.cfg.Fs, filepath.Join(imageDir, constants.GrubPrefixDir), constants.DirPerm)
-	if err != nil {
-		return err
-	}
-
-	switch g.cfg.Arch {
-	case constants.ArchAmd64, constants.Archx86:
-		// Create eltorito image
-		eltorito, err := g.BuildEltoritoImg(rootDir)
-		if err != nil {
-			return err
-		}
-
-		// Inlude loaders in expected paths
-		loaderDir := filepath.Join(imageDir, constants.IsoLoaderPath)
-		err = utils.MkdirAll(g.cfg.Fs, loaderDir, constants.DirPerm)
-		if err != nil {
-			return err
-		}
-		loaderFiles := []string{eltorito, constants.GrubBootHybridImg}
-		loaderFiles = append(loaderFiles, strings.Split(constants.SyslinuxFiles, " ")...)
-		for _, f := range loaderFiles {
-			err = utils.CopyFile(g.cfg.Fs, filepath.Join(rootDir, f), loaderDir)
-			if err != nil {
-				return err
-			}
-		}
-		fontsDir := filepath.Join(loaderDir, "/grub2/fonts")
-		err = utils.MkdirAll(g.cfg.Fs, fontsDir, constants.DirPerm)
-		if err != nil {
-			return err
-		}
-		err = utils.CopyFile(g.cfg.Fs, filepath.Join(rootDir, constants.GrubFont), fontsDir)
-		if err != nil {
-			return err
-		}
-	case constants.ArchArm64:
-		// TBC
-	default:
-		return fmt.Errorf("Not supported architecture: %v", g.cfg.Arch)
-	}
-
-	// Write grub.cfg file
-	err = g.cfg.Fs.WriteFile(
-		filepath.Join(imageDir, constants.GrubPrefixDir, constants.GrubCfg),
-		[]byte(fmt.Sprintf(constants.GrubCfgTemplate, g.spec.GrubEntry, g.spec.Label)),
-		constants.FilePerm,
-	)
-	if err != nil {
-		return err
-	}
-
-	// Include EFI contents in iso root too
-	return g.PrepareEFI(rootDir, imageDir)
-}
-
-func (g *BuildISOAction) BuildEltoritoImg(rootDir string) (string, error) {
-	var args []string
-	args = append(args, "-O", constants.GrubBiosTarget)
-	args = append(args, "-o", constants.GrubBiosImg)
-	args = append(args, "-p", constants.GrubPrefixDir)
-	args = append(args, "-d", constants.GrubI386BinDir)
-	args = append(args, strings.Split(constants.GrubModules, " ")...)
-
-	chRoot := utils.NewChroot(rootDir, &g.cfg.Config)
-	out, err := chRoot.Run("grub2-mkimage", args...)
-	if err != nil {
-		g.cfg.Logger.Errorf("grub2-mkimage failed: %s", string(out))
-		g.cfg.Logger.Errorf("Error: %v", err)
-		return "", err
-	}
-
-	concatFiles := func() error {
-		return utils.ConcatFiles(
-			g.cfg.Fs, []string{constants.GrubBiosCDBoot, constants.GrubBiosImg},
-			constants.GrubEltoritoImg,
-		)
-	}
-	err = chRoot.RunCallback(concatFiles)
-	if err != nil {
-		return "", err
-	}
-	return constants.GrubEltoritoImg, nil
 }
