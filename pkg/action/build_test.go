@@ -25,6 +25,7 @@ import (
 	"github.com/kairos-io/enki/pkg/action"
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	v1mock "github.com/kairos-io/kairos-agent/v2/tests/mocks"
@@ -36,7 +37,7 @@ import (
 )
 
 var _ = Describe("BuildISOAction", func() {
-	var cfg *v1.BuildConfig
+	var cfg *types.BuildConfig
 	var runner *v1mock.FakeRunner
 	var fs vfs.FS
 	var logger v1.Logger
@@ -74,7 +75,7 @@ var _ = Describe("BuildISOAction", func() {
 		cleanup()
 	})
 	Describe("Build ISO", Label("iso"), func() {
-		var iso *v1.LiveISO
+		var iso *types.LiveISO
 		BeforeEach(func() {
 			iso = config.NewISO()
 
@@ -111,6 +112,13 @@ var _ = Describe("BuildISOAction", func() {
 			_, err = fs.Create(filepath.Join(bootDir, "vmlinuz"))
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = fs.Create(filepath.Join(bootDir, "initrd"))
+			Expect(err).ShouldNot(HaveOccurred())
+			// Create shim and efi fake files
+			err = utils.MkdirAll(fs, filepath.Join(bootDir, "efi", "EFI", "fedora"), constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "shim.efi"))
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "grubx64.efi"))
 			Expect(err).ShouldNot(HaveOccurred())
 
 			buildISO := action.NewBuildISOAction(cfg, iso)
@@ -177,6 +185,13 @@ var _ = Describe("BuildISOAction", func() {
 			_, err = fs.Create(filepath.Join(bootDir, "vmlinuz"))
 			Expect(err).ShouldNot(HaveOccurred())
 			_, err = fs.Create(filepath.Join(bootDir, "initrd"))
+			Expect(err).ShouldNot(HaveOccurred())
+			// Create shim and efi fake files
+			err = utils.MkdirAll(fs, filepath.Join(bootDir, "efi", "EFI", "fedora"), constants.DirPerm)
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "shim.efi"))
+			Expect(err).ShouldNot(HaveOccurred())
+			_, err = fs.Create(filepath.Join(bootDir, "efi", "EFI", "fedora", "grubx64.efi"))
 			Expect(err).ShouldNot(HaveOccurred())
 
 			runner.SideEffect = func(command string, args ...string) ([]byte, error) {

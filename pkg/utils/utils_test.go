@@ -22,6 +22,7 @@ import (
 	conf "github.com/kairos-io/enki/pkg/config"
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/kairos-io/enki/pkg/utils"
+	cfg "github.com/kairos-io/kairos-agent/v2/pkg/config"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	v1mock "github.com/kairos-io/kairos-agent/v2/tests/mocks"
 	. "github.com/onsi/ginkgo/v2"
@@ -33,7 +34,7 @@ import (
 )
 
 var _ = Describe("Utils", Label("utils"), func() {
-	var config *v1.Config
+	var config *cfg.Config
 	var runner *v1mock.FakeRunner
 	var logger v1.Logger
 	var syscall *v1mock.FakeSyscall
