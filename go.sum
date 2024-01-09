@@ -348,6 +348,8 @@ github.com/kairos-io/kairos-sdk v0.0.21 h1:iF1Wq+j4xTsR4TSNd/xkuOTTQDvf+yPB2E3Is
 github.com/kairos-io/kairos-sdk v0.0.21/go.mod h1:17dpFG2d3Q/TcT86DlLK5nNXEjlSrkYl7bsvO2cpYGE=
 github.com/kairos-io/kairos-sdk v0.0.22 h1:lRJ2Jj4VGwzNzX5I+NEV017lz38uHn+uNXlpSSr00v0=
 github.com/kairos-io/kairos-sdk v0.0.22/go.mod h1:17dpFG2d3Q/TcT86DlLK5nNXEjlSrkYl7bsvO2cpYGE=
+github.com/kairos-io/kairos-sdk v0.0.23 h1:2osQaqIPDB0Tj0a0v8NGOPrgQWve3D6r8nHRf7NKe3I=
+github.com/kairos-io/kairos-sdk v0.0.23/go.mod h1:17dpFG2d3Q/TcT86DlLK5nNXEjlSrkYl7bsvO2cpYGE=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c h1:eKb4PqwAMhlqwXw0W3atpKaYaPGlXE/Fwh+xpCEYaPk=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c/go.mod h1:VOfm8h1NySetVlpHDSnbpCMsvCgYaU+YDn4XezUy2+4=
 github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
