@@ -2,7 +2,6 @@ package action
 
 import (
 	"fmt"
-	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"path/filepath"
 	"strings"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
+	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	sdk "github.com/kairos-io/kairos-sdk/utils"
 )
 

@@ -2,9 +2,10 @@ package types
 
 import (
 	"fmt"
+
+	cfg "github.com/kairos-io/kairos-agent/v2/pkg/config"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 )
-import cfg "github.com/kairos-io/kairos-agent/v2/pkg/config"
 
 type LiveISO struct {
 	RootFS             []*v1.ImageSource `yaml:"rootfs,omitempty" mapstructure:"rootfs"`
