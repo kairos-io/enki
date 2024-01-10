@@ -143,35 +143,93 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 	return nil
 }
 
+// createEFI creates the EFI image that is used for booting
+// it searches the rootfs for the shim/grub.efi file and copies it into a directory with the proper EFI structure
+// then it generates a grub.cfg that chainloads into the grub.cfg of the livecd (which is the normal livecd grub config from luet packages)
+// then it calculates the size of the EFI image based on the files copied and creates the image
 func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	var err error
-	var fallBackShim string
+
 	// rootfs /efi dir
-	// this is shipped usually with osbuilder and the files come from livecd/grub2-efi-artifacts
-	var fallBackGrub = filepath.Join("/efi", constants.EfiBootPath, "grub.efi")
 	img := filepath.Join(isoDir, constants.IsoEFIPath)
 	temp, _ := utils.TempDir(b.cfg.Fs, "", "enki-iso")
-	utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
-	utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, constants.EfiBootPath), constants.DirPerm)
+	_ = utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
+	_ = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, constants.EfiBootPath), constants.DirPerm)
+
+	err = b.copyShim(temp, rootdir)
+	if err != nil {
+		return err
+	}
+
+	err = b.copyGrub(temp, rootdir)
+	if err != nil {
+		return err
+	}
+
+	// Generate grub cfg that chainloads into the default livecd grub under /boot/grub2/grub.cfg
+	// Its read from the root of the livecd, so we need to copy it into /EFI/BOOT/grub.cfg
+	// This is due to the hybrid bios/efi boot mode of the livecd
+	// the uefi.img is loaded into memory and run, but grub only sees the livecd root
+	_ = b.cfg.Fs.WriteFile(filepath.Join(isoDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+
+	// Calculate EFI image size based on artifacts
+	efiSize, err := utils.DirSize(b.cfg.Fs, temp)
+	if err != nil {
+		return err
+	}
+	// align efiSize to the next 4MB slot
+	align := int64(4 * 1024 * 1024)
+	efiSizeMB := (efiSize/align*align + align) / (1024 * 1024)
+	// Create the actual efi image
+	err = b.e.CreateFileSystemImage(&v1.Image{
+		File:  img,
+		Size:  uint(efiSizeMB),
+		FS:    constants.EfiFs,
+		Label: constants.EfiLabel,
+	})
+	if err != nil {
+		return err
+	}
+	b.cfg.Logger.Debugf("EFI image created at %s", img)
+	// copy the files from the temporal efi dir into the EFI image
+	files, err := b.cfg.Fs.ReadDir(temp)
+	if err != nil {
+		return err
+	}
+
+	for _, f := range files {
+		// This copies the efi files into the efi img used for the boot
+		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(temp, f.Name()), img)
+		_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(temp, f.Name()), "::")
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// copyShim copies the shim files into the EFI partition
+// tempdir is the temp dir where the EFI image is generated from
+// rootdir is the rootfs where the shim files are searched for
+func (b BuildISOAction) copyShim(tempdir, rootdir string) error {
+	var fallBackShim string
+	var err error
 	// Get possible shim file paths
 	shimFiles := sdk.GetEfiShimFiles(b.cfg.Arch)
-	// Get possible grub file paths
-	grubFiles := sdk.GetEfiGrubFiles(b.cfg.Arch)
-
 	// Calculate shim path based on arch
 	var shimDest string
 	switch b.cfg.Arch {
 	case constants.ArchAmd64, constants.Archx86:
-		shimDest = filepath.Join(temp, constants.ShimEfiDest)
+		shimDest = filepath.Join(tempdir, constants.ShimEfiDest)
 		fallBackShim = filepath.Join("/efi", constants.EfiBootPath, "bootx64.efi")
 	case constants.ArchArm64:
-		shimDest = filepath.Join(temp, constants.ShimEfiArmDest)
+		shimDest = filepath.Join(tempdir, constants.ShimEfiArmDest)
 		fallBackShim = filepath.Join("/efi", constants.EfiBootPath, "bootaa64.efi")
 	default:
 		err = fmt.Errorf("not supported architecture: %v", b.cfg.Arch)
 	}
-
-	shimDone := false
+	var shimDone bool
 	for _, f := range shimFiles {
 		_, err := b.cfg.Fs.Stat(filepath.Join(rootdir, f))
 		if err != nil {
@@ -206,7 +264,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		b.cfg.Logger.Debugf("Using fallback shim file %s", fallBackShim)
 		// Also copy the shim.efi file into the rootfs so the installer can find it. Side effect of
 		// alpine not providing shim/grub.efi and we not providing it from packages anymore
-		utils.MkdirAll(b.cfg.Fs, filepath.Join(rootdir, filepath.Dir(shimFiles[0])), constants.DirPerm)
+		_ = utils.MkdirAll(b.cfg.Fs, filepath.Join(rootdir, filepath.Dir(shimFiles[0])), constants.DirPerm)
 		err = utils.CopyFile(
 			b.cfg.Fs,
 			fallBackShim,
@@ -217,8 +275,19 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 			return fmt.Errorf("could not copy fallback shim into rootfs from %s to %s", fallBackShim, filepath.Join(rootdir, shimFiles[0]))
 		}
 	}
+	return err
+}
 
-	grubDone := false
+// copyGrub copies the shim files into the EFI partition
+// tempdir is the temp dir where the EFI image is generated from
+// rootdir is the rootfs where the shim files are searched for
+func (b BuildISOAction) copyGrub(tempdir, rootdir string) error {
+	// this is shipped usually with osbuilder and the files come from livecd/grub2-efi-artifacts
+	var fallBackGrub = filepath.Join("/efi", constants.EfiBootPath, "grub.efi")
+	var err error
+	// Get possible grub file paths
+	grubFiles := sdk.GetEfiGrubFiles(b.cfg.Arch)
+	var grubDone bool
 	for _, f := range grubFiles {
 		stat, err := b.cfg.Fs.Stat(filepath.Join(rootdir, f))
 		if err != nil {
@@ -228,7 +297,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		// Same name as the source, shim looks for that name.
 		// remove the .signed suffix if present
 		name, _ := strings.CutSuffix(stat.Name(), ".signed")
-		nameDest := filepath.Join(temp, "EFI/BOOT", name)
+		nameDest := filepath.Join(tempdir, "EFI/BOOT", name)
 		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), nameDest)
 
 		err = utils.CopyFile(
@@ -249,7 +318,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		err = utils.CopyFile(
 			b.cfg.Fs,
 			fallBackGrub,
-			filepath.Join(temp, "EFI/BOOT/grub.efi"),
+			filepath.Join(tempdir, "EFI/BOOT/grub.efi"),
 		)
 		if err != nil {
 			b.cfg.Logger.Debugf("List of grub files searched for: %s", grubFiles)
@@ -269,48 +338,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 			return fmt.Errorf("could not copy fallback shim into rootfs from %s to %s", fallBackGrub, filepath.Join(rootdir, grubFiles[0]))
 		}
 	}
-
-	// Generate grub cfg that chainloads into the default livecd grub under /boot/grub2/grub.cfg
-	// Its read from the root of the livecd, so we need to copy it into /EFI/BOOT/grub.cfg
-	// This is due to the hybrid bios/efi boot mode of the livecd
-	// the uefi.img is loaded into memory and run, but grub only sees the livecd root
-	b.cfg.Fs.WriteFile(filepath.Join(isoDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
-
-	// Calculate EFI image size based on artifacts
-	efiSize, err := utils.DirSize(b.cfg.Fs, temp)
-	if err != nil {
-		return err
-	}
-	// align efiSize to the next 4MB slot
-	align := int64(4 * 1024 * 1024)
-	efiSizeMB := (efiSize/align*align + align) / (1024 * 1024)
-
-	err = b.e.CreateFileSystemImage(&v1.Image{
-		File:  img,
-		Size:  uint(efiSizeMB),
-		FS:    constants.EfiFs,
-		Label: constants.EfiLabel,
-	})
-	if err != nil {
-		return err
-	}
-	b.cfg.Logger.Debugf("EFI image created at %s", img)
-
-	files, err := b.cfg.Fs.ReadDir(temp)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		// This copies the efi files into the efi img used for the boot
-		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(temp, f.Name()), img)
-		_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(temp, f.Name()), "::")
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return err
 }
 
 func (b BuildISOAction) burnISO(root string) error {
