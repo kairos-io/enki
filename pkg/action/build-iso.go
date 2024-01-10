@@ -153,8 +153,16 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	// rootfs /efi dir
 	img := filepath.Join(isoDir, constants.IsoEFIPath)
 	temp, _ := utils.TempDir(b.cfg.Fs, "", "enki-iso")
-	_ = utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
-	_ = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, constants.EfiBootPath), constants.DirPerm)
+	err = utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
+	if err != nil {
+		b.cfg.Logger.Errorf("Failed creating temp efi dir: %v", err)
+		return err
+	}
+	err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, constants.EfiBootPath), constants.DirPerm)
+	if err != nil {
+		b.cfg.Logger.Errorf("Failed creating iso efi dir: %v", err)
+		return err
+	}
 
 	err = b.copyShim(temp, rootdir)
 	if err != nil {
@@ -170,7 +178,11 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	// Its read from the root of the livecd, so we need to copy it into /EFI/BOOT/grub.cfg
 	// This is due to the hybrid bios/efi boot mode of the livecd
 	// the uefi.img is loaded into memory and run, but grub only sees the livecd root
-	_ = b.cfg.Fs.WriteFile(filepath.Join(isoDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+	err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+	if err != nil {
+		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+		return err
+	}
 
 	// Calculate EFI image size based on artifacts
 	efiSize, err := utils.DirSize(b.cfg.Fs, temp)
@@ -202,6 +214,7 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(temp, f.Name()), img)
 		_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(temp, f.Name()), "::")
 		if err != nil {
+			b.cfg.Logger.Errorf("Failed copying %s to %s: %v", filepath.Join(temp, f.Name()), img, err)
 			return err
 		}
 	}
