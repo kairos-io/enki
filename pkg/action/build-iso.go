@@ -310,8 +310,12 @@ func (b BuildISOAction) copyGrub(tempdir, rootdir string) error {
 		// Same name as the source, shim looks for that name.
 		// remove the .signed suffix if present
 		name, _ := strings.CutSuffix(stat.Name(), ".signed")
+		// Copy and maintain the original name
 		nameDest := filepath.Join(tempdir, "EFI/BOOT", name)
+		// Lets copy also over grub.efi just in case it looks for that
+		nameBackup := filepath.Join(tempdir, "EFI/BOOT", "grub.efi")
 		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), nameDest)
+		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), nameBackup)
 
 		err = utils.CopyFile(
 			b.cfg.Fs,
