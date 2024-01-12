@@ -129,17 +129,18 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 		return err
 	}
 
+	b.cfg.Logger.Info("Creating EFI image...")
+	err = b.createEFI(rootDir, isoDir)
+	if err != nil {
+		return err
+	}
+
 	b.cfg.Logger.Info("Creating squashfs...")
 	err = utils.CreateSquashFS(b.cfg.Runner, b.cfg.Logger, rootDir, filepath.Join(isoDir, constants.IsoRootFile), constants.GetDefaultSquashfsOptions())
 	if err != nil {
 		return err
 	}
 
-	b.cfg.Logger.Info("Creating EFI image...")
-	err = b.createEFI(rootDir, isoDir)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -185,16 +186,24 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	}
 	// Ubuntu efi searches for the grub.cfg file under /EFI/ubuntu/grub.cfg while we store it under /boot/grub2/grub.cfg
 	// workaround this by copying it there as well
-	// TODO: Should we symlink all the distros folders to our single grub.cfg?
-	err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, "EFI/ubuntu/"), constants.DirPerm)
+	// read the os-release from the rootfs to know if we are creating a ubuntu based iso
+	flavor, err := sdk.OSRelease("FLAVOR", filepath.Join(rootdir, "etc/os-release"))
 	if err != nil {
-		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
-		return err
+		b.cfg.Logger.Warnf("Failed reading os-release from %s: %v", filepath.Join(rootdir, "etc/os-release"), err)
 	}
-	err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
-	if err != nil {
-		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
-		return err
+	b.cfg.Logger.Infof("Detected Flavor: %s", flavor)
+	if err == nil && strings.Contains(strings.ToLower(flavor), "ubuntu") {
+		b.cfg.Logger.Infof("Ubuntu based ISO detected, copying grub.cfg to /EFI/ubuntu/grub.cfg")
+		err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, "EFI/ubuntu/"), constants.DirPerm)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+			return err
+		}
+		err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+			return err
+		}
 	}
 
 	// Calculate EFI image size based on artifacts
@@ -430,10 +439,10 @@ func (b BuildISOAction) applySources(target string, sources ...*v1.ImageSource) 
 // no suffixes
 func cleanupGrubName(name string) string {
 	// remove the .signed suffix if present
-	clean, _ := strings.CutSuffix(name, ".signed")
+	clean := strings.TrimSuffix(name, ".signed")
 	// remove the .dualsigned suffix if present
-	clean, _ = strings.CutSuffix(clean, ".dualsigned")
+	clean = strings.TrimSuffix(clean, ".dualsigned")
 	// remove the .signed.latest suffix if present
-	clean, _ = strings.CutSuffix(clean, ".signed.latest")
+	clean = strings.TrimSuffix(clean, ".signed.latest")
 	return clean
 }
