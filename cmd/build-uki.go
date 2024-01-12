@@ -21,7 +21,7 @@ func NewBuildUKICmd() *cobra.Command {
 			"SOURCE - should be provided as uri in following format <sourceType>:<sourceName>\n" +
 			"    * <sourceType> - might be [\"dir\", \"file\", \"oci\", \"docker\"], as default is \"docker\"\n" +
 			"    * <sourceName> - is path to file or directory, image name with tag version",
-		Args: cobra.MaximumNArgs(1),
+		Args: cobra.ExactArgs(2),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// TODO: is this needed? Can we avoid it?
 			// return CheckRoot()
@@ -62,7 +62,7 @@ func NewBuildUKICmd() *cobra.Command {
 				return err
 			}
 
-			a := action.NewBuildUKIAction(cfg, imgSource)
+			a := action.NewBuildUKIAction(cfg, imgSource, args[1])
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
