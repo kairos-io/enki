@@ -129,17 +129,18 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 		return err
 	}
 
+	b.cfg.Logger.Info("Creating EFI image...")
+	err = b.createEFI(rootDir, isoDir)
+	if err != nil {
+		return err
+	}
+
 	b.cfg.Logger.Info("Creating squashfs...")
 	err = utils.CreateSquashFS(b.cfg.Runner, b.cfg.Logger, rootDir, filepath.Join(isoDir, constants.IsoRootFile), constants.GetDefaultSquashfsOptions())
 	if err != nil {
 		return err
 	}
 
-	b.cfg.Logger.Info("Creating EFI image...")
-	err = b.createEFI(rootDir, isoDir)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -182,6 +183,27 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 		return err
+	}
+	// Ubuntu efi searches for the grub.cfg file under /EFI/ubuntu/grub.cfg while we store it under /boot/grub2/grub.cfg
+	// workaround this by copying it there as well
+	// read the os-release from the rootfs to know if we are creating a ubuntu based iso
+	flavor, err := sdk.OSRelease("FLAVOR", filepath.Join(rootdir, "etc/os-release"))
+	if err != nil {
+		b.cfg.Logger.Warnf("Failed reading os-release from %s: %v", filepath.Join(rootdir, "etc/os-release"), err)
+	}
+	b.cfg.Logger.Infof("Detected Flavor: %s", flavor)
+	if err == nil && strings.Contains(strings.ToLower(flavor), "ubuntu") {
+		b.cfg.Logger.Infof("Ubuntu based ISO detected, copying grub.cfg to /EFI/ubuntu/grub.cfg")
+		err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, "EFI/ubuntu/"), constants.DirPerm)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+			return err
+		}
+		err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+			return err
+		}
 	}
 
 	// Calculate EFI image size based on artifacts
@@ -307,10 +329,8 @@ func (b BuildISOAction) copyGrub(tempdir, rootdir string) error {
 			b.cfg.Logger.Debugf("skip copying %s: not found", filepath.Join(rootdir, f))
 			continue
 		}
-		// Same name as the source, shim looks for that name.
-		// remove the .signed suffix if present
-		name, _ := strings.CutSuffix(stat.Name(), ".signed")
-		nameDest := filepath.Join(tempdir, "EFI/BOOT", name)
+		// Same name as the source, shim looks for that name. We need to remove the .signed suffix
+		nameDest := filepath.Join(tempdir, "EFI/BOOT", cleanupGrubName(stat.Name()))
 		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(rootdir, f), nameDest)
 
 		err = utils.CopyFile(
@@ -411,4 +431,18 @@ func (b BuildISOAction) applySources(target string, sources ...*v1.ImageSource) 
 		}
 	}
 	return nil
+}
+
+// cleanupGrubName will cleanup the grub name to provide a proper grub named file
+// As the original name can contain several suffixes to indicate its signed status
+// we need to clean them up before using them as the shim will look for a file with
+// no suffixes
+func cleanupGrubName(name string) string {
+	// remove the .signed suffix if present
+	clean := strings.TrimSuffix(name, ".signed")
+	// remove the .dualsigned suffix if present
+	clean = strings.TrimSuffix(clean, ".dualsigned")
+	// remove the .signed.latest suffix if present
+	clean = strings.TrimSuffix(clean, ".signed.latest")
+	return clean
 }
