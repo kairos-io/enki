@@ -1,7 +1,6 @@
 package e2e_test
 
 import (
-	"fmt"
 	"os"
 	"path"
 
@@ -29,9 +28,21 @@ var _ = Describe("build-uki", func() {
 		enki.Cleanup()
 	})
 
+	When("some dependency is missing", func() {
+		BeforeEach(func() {
+			enki = NewEnki("busybox")
+		})
+
+		It("returns an error about missing deps", func() {
+			out, err := enki.Run("build-uki", image, resultFile)
+			Expect(err).To(HaveOccurred(), out)
+			Expect(out).To(MatchRegexp("executable file not found in \\$PATH"))
+		})
+	})
+
 	It("successfully builds an UKI from a Docker image", func() {
-		out := enki.Run("build-uki", image, resultFile)
-		fmt.Printf("out = %+v\n", out)
+		out, err := enki.Run("build-uki", image, resultFile)
+		Expect(err).ToNot(HaveOccurred(), out)
 
 		_, err = os.Stat(resultFile)
 		Expect(err).ToNot(HaveOccurred())

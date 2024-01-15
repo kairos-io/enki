@@ -45,7 +45,7 @@ func NewEnki(image ...string) *Enki {
 // enki relies on various external binaries. To make sure those dependencies
 // are in place (or to test the behavior of enki when they are not), we run enki
 // in a container using this function.
-func (e *Enki) Run(args ...string) string {
+func (e *Enki) Run(args ...string) (string, error) {
 	cmd := exec.Command("docker",
 		append([]string{
 			"run", "--rm",
@@ -54,9 +54,8 @@ func (e *Enki) Run(args ...string) string {
 			e.ContainerImage}, args...)...)
 
 	out, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred(), string(out))
 
-	return string(out)
+	return string(out), err
 }
 
 func (e *Enki) Cleanup() {
