@@ -51,4 +51,12 @@ var _ = Describe("build-uki", func() {
 		_, err = os.Stat(resultFile)
 		Expect(err).ToNot(HaveOccurred())
 	})
+
+	It("successfully builds a compressed version of the UKI file", func() {
+		out, err := enki.Run("build-uki", image, resultFile)
+		Expect(err).ToNot(HaveOccurred(), out)
+
+		_, err = os.Stat(resultFile + ".gz")
+		Expect(err).ToNot(HaveOccurred())
+	})
 })

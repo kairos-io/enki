@@ -1,7 +1,9 @@
 package action
 
 import (
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -46,7 +48,11 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
-	if err := b.createInitramfs(tmpDir, b.ukiFile); err != nil {
+	if err := b.createInitramfs(tmpDir); err != nil {
+		return err
+	}
+
+	if err := b.compressInitramfs(tmpDir); err != nil {
 		return err
 	}
 
@@ -102,14 +108,14 @@ func (b *BuildUKIAction) setupDirectoriesAndFiles(tmpDir string) error {
 	return nil
 }
 
-func (b *BuildUKIAction) createInitramfs(sourceDir, archivePath string) error {
+func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 	format := "newc"
 	archiver, err := cpio.Format(format)
 	if err != nil {
 		return fmt.Errorf("format %q not supported: %w", format, err)
 	}
 
-	cpioFile, err := os.Create(archivePath)
+	cpioFile, err := os.Create(b.ukiFile)
 	if err != nil {
 		return err
 	}
@@ -160,6 +166,30 @@ func (b *BuildUKIAction) createInitramfs(sourceDir, archivePath string) error {
 
 	if err := cpio.WriteTrailer(rw); err != nil {
 		return fmt.Errorf("error writing trailer record: %w", err)
+	}
+
+	return nil
+}
+
+func (b *BuildUKIAction) compressInitramfs(sourceDir string) error {
+	inputFile, err := os.Open(b.ukiFile)
+	if err != nil {
+		return fmt.Errorf("error opening initramfs file: %w", err)
+	}
+	defer inputFile.Close()
+
+	outputFileName := b.ukiFile + ".gz"
+	outputFile, err := os.Create(outputFileName)
+	if err != nil {
+		return fmt.Errorf("error creating compressed initramfs file: %w", err)
+	}
+	defer outputFile.Close()
+
+	gzipWriter := gzip.NewWriter(outputFile)
+	defer gzipWriter.Close()
+
+	if _, err = io.Copy(gzipWriter, inputFile); err != nil {
+		return fmt.Errorf("error writing data to the compress initramfs file: %w", err)
 	}
 
 	return nil
