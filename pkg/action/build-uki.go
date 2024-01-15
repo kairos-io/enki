@@ -17,6 +17,8 @@ import (
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 )
 
+const Cmdline = "console=ttyS0 console=tty1 net.ifnames=1 rd.immucore.oemlabel=COS_OEM rd.immucore.debug rd.immucore.oemtimeout=2 rd.immucore.uki selinux=0"
+
 type BuildUKIAction struct {
 	img     *v1.ImageSource
 	e       *elemental.Elemental
