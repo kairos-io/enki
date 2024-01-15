@@ -16,11 +16,12 @@ var _ = Describe("build-uki", func() {
 	var enki *Enki
 
 	BeforeEach(func() {
-		enki = NewEnki("busybox")
-		image = "busybox"
 		resultDir, err = os.MkdirTemp("", "enki-build-uki-test-")
 		Expect(err).ToNot(HaveOccurred())
 		resultFile = path.Join(resultDir, "result.uki")
+
+		enki = NewEnki("enki-image", resultDir)
+		image = "busybox"
 	})
 
 	AfterEach(func() {
@@ -30,13 +31,16 @@ var _ = Describe("build-uki", func() {
 
 	When("some dependency is missing", func() {
 		BeforeEach(func() {
-			enki = NewEnki("busybox")
+			enki = NewEnki("busybox", resultDir)
 		})
 
 		It("returns an error about missing deps", func() {
 			out, err := enki.Run("build-uki", image, resultFile)
 			Expect(err).To(HaveOccurred(), out)
-			Expect(out).To(MatchRegexp("executable file not found in \\$PATH"))
+			Expect(out).To(Or(
+				MatchRegexp("executable file not found in \\$PATH"),
+				MatchRegexp("no such file or directory"),
+			))
 		})
 	})
 

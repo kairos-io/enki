@@ -12,11 +12,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-const DefaultRunImage = "busybox"
-
 type Enki struct {
 	Path           string
 	ContainerImage string
+	Dirs           []string // directories to mount from host
 }
 
 func TestEnkiE2E(t *testing.T) {
@@ -24,34 +23,34 @@ func TestEnkiE2E(t *testing.T) {
 	RunSpecs(t, "Enki end to end test suite")
 }
 
-func NewEnki(image ...string) *Enki {
-	var runImage string
-
-	if len(image) == 0 {
-		runImage = DefaultRunImage
-	} else {
-		runImage = image[0]
-	}
-
+func NewEnki(image string, dirs ...string) *Enki {
 	tmpDir, err := os.MkdirTemp("", "enki-e2e-tmp")
 	Expect(err).ToNot(HaveOccurred())
 	enkiBinary := path.Join(tmpDir, "enki")
 
 	compileEnki(enkiBinary)
 
-	return &Enki{ContainerImage: runImage, Path: enkiBinary}
+	return &Enki{ContainerImage: image, Path: enkiBinary, Dirs: dirs}
 }
 
 // enki relies on various external binaries. To make sure those dependencies
 // are in place (or to test the behavior of enki when they are not), we run enki
 // in a container using this function.
-func (e *Enki) Run(args ...string) (string, error) {
-	cmd := exec.Command("docker",
-		append([]string{
-			"run", "--rm",
-			"--entrypoint", "/bin/enki",
-			"-v", fmt.Sprintf("%s:/bin/enki", e.Path),
-			e.ContainerImage}, args...)...)
+func (e *Enki) Run(enkiArgs ...string) (string, error) {
+	args := []string{
+		"run", "--rm",
+		"--entrypoint", "/bin/enki",
+		"-v", fmt.Sprintf("%s:/bin/enki", e.Path),
+	}
+
+	for _, d := range e.Dirs {
+		args = append(args, "-v", fmt.Sprintf("%[1]s:%[1]s", d))
+	}
+
+	args = append(args, e.ContainerImage)
+	args = append(args, enkiArgs...)
+
+	cmd := exec.Command("docker", args...)
 
 	out, err := cmd.CombinedOutput()
 
@@ -72,6 +71,7 @@ func compileEnki(targetPath string) {
 	Expect(err).ToNot(HaveOccurred())
 
 	cmd := exec.Command("go", "build", "-o", targetPath)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=0")
 	cmd.Dir = rootDir
 
 	out, err := cmd.CombinedOutput()
