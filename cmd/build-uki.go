@@ -15,13 +15,22 @@ import (
 // the root command.
 func NewBuildUKICmd() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "build-uki SOURCE",
+		Use:   "build-uki SourceImage ResultFile KeysDirectory",
 		Short: "Build a UKI artifact from a container image",
 		Long: "Build a UKI artifact from a container image\n\n" +
-			"SOURCE - should be provided as uri in following format <sourceType>:<sourceName>\n" +
+			"SourceImage - should be provided as uri in following format <sourceType>:<sourceName>\n" +
 			"    * <sourceType> - might be [\"dir\", \"file\", \"oci\", \"docker\"], as default is \"docker\"\n" +
-			"    * <sourceName> - is path to file or directory, image name with tag version",
-		Args: cobra.ExactArgs(2),
+			"    * <sourceName> - is path to file or directory, image name with tag version" +
+			"ResultFile - the path to the resulting iso file\n" +
+			"KeysDirectory - the path to the directory with the signing keys.\n" +
+			"    The following files are expected in this directory:\n" +
+			"    - DB.crt\n" +
+			"    - DB.der\n" +
+			"    - DB.key\n" +
+			"    - KEK.der\n" +
+			"    - PK.der\n" +
+			"    - tpm2-pcr-private.pem\n",
+		Args: cobra.ExactArgs(3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			// TODO: is this needed? Can we avoid it?
 			// return CheckRoot()
@@ -62,7 +71,7 @@ func NewBuildUKICmd() *cobra.Command {
 				return err
 			}
 
-			a := action.NewBuildUKIAction(cfg, imgSource, args[1])
+			a := action.NewBuildUKIAction(cfg, imgSource, args[1], args[2])
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
