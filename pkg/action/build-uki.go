@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,10 +26,12 @@ type BuildUKIAction struct {
 	e             *elemental.Elemental
 	isoFile       string
 	keysDirectory string
+	logger        v1.Logger
 }
 
 func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, result, keysDirectory string) *BuildUKIAction {
 	b := &BuildUKIAction{
+		logger:        cfg.Logger,
 		img:           img,
 		e:             elemental.NewElemental(&cfg.Config),
 		isoFile:       result,
@@ -43,28 +46,34 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
+	b.logger.Info("extracting image to a temporary directory")
 	sourceDir, err := b.extractImage()
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(sourceDir)
 
+	b.logger.Info("creating additional directories")
 	if err := b.setupDirectoriesAndFiles(sourceDir); err != nil {
 		return err
 	}
 
+	b.logger.Info("creating an initramfs file")
 	if err := b.createInitramfs(sourceDir); err != nil {
 		return err
 	}
 
+	b.logger.Info("running ukify")
 	if err := b.ukify(sourceDir); err != nil {
 		return err
 	}
 
+	b.logger.Info("running sgsign")
 	if err := b.sbSign(sourceDir); err != nil {
 		return err
 	}
 
+	b.logger.Info("creating kairos and loader conf files")
 	if err := b.createConfFiles(sourceDir); err != nil {
 		return err
 	}
@@ -359,30 +368,37 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		return err
 	}
 
+	b.logger.Info("preparing a directory with the contents of the ISO")
 	if err := prepareISODir(filesMap, tmpDir); err != nil {
 		return err
 	}
 
+	b.logger.Info("calculating the size of the img file")
 	artifactSize, err := sumFileSizes(tmpDir)
 	if err != nil {
 		return err
 	}
 
 	// Create just the size we need + 50MB just in case
-	imgFile, err := createImgWithSize(artifactSize + 50)
+	imgSize := artifactSize + 50
+	b.logger.Info(fmt.Sprintf("creating the img file with size: %dMb", imgSize))
+	imgFile, err := createImgWithSize(imgSize)
 	if err != nil {
 		return err
 	}
 	defer os.Remove(imgFile)
 
+	b.logger.Info("creating directories in the img file")
 	if err := createImgDirs(imgFile, filesMap); err != nil {
 		return err
 	}
 
+	b.logger.Info("copying files in the img file")
 	if err := copyFilesToImg(imgFile, filesMap); err != nil {
 		return err
 	}
 
+	b.logger.Info("creating the iso files with xorriso")
 	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
 		"-e", imgFile, "-no-emul-boot", "-o", b.isoFile, tmpDir)
 	out, err := cmd.CombinedOutput()
@@ -460,13 +476,13 @@ func findKairosVersion(sourceDir string) (string, error) {
 	}
 
 	re := regexp.MustCompile("(?m)^KAIROS_RELEASE=\"(.*)\"")
-	match := re.FindAllString(string(osReleaseBytes), -1)
+	match := re.FindStringSubmatch(string(osReleaseBytes))
 
-	if len(match) != 1 {
+	if len(match) != 2 {
 		return "", fmt.Errorf("unexpected number of matches for KAIROS_RELEASE in os-release: %d", len(match))
 	}
 
-	return match[0], nil
+	return match[1], nil
 }
 
 func createImgWithSize(size int64) (string, error) {
@@ -497,7 +513,9 @@ func sumFileSizes(dir string) (int64, error) {
 		return nil
 	})
 
-	return total, err
+	totalInMB := int64(math.Round(float64(total) / (1024 * 1024)))
+
+	return totalInMB, err
 }
 
 // prepareISODir copies all the needed files for the iso from the sourceDir
@@ -538,7 +556,7 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 		cmd := exec.Command("mmd", "-i", imgFile, dir)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			return fmt.Errorf("creating directory %s on the img file: %w\n%s", dir, err, string(out))
+			return fmt.Errorf("creating directory %s on the img file: %w\n%s\nThe failed command was: %s", dir, err, string(out), cmd.String())
 		}
 	}
 
