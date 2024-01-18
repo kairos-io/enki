@@ -2,7 +2,7 @@ package e2e_test
 
 import (
 	"os"
-	"path"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -10,6 +10,7 @@ import (
 
 var _ = Describe("build-uki", func() {
 	var resultDir string
+	var keysDir string
 	var resultFile string
 	var image string
 	var err error
@@ -18,10 +19,14 @@ var _ = Describe("build-uki", func() {
 	BeforeEach(func() {
 		resultDir, err = os.MkdirTemp("", "enki-build-uki-test-")
 		Expect(err).ToNot(HaveOccurred())
-		resultFile = path.Join(resultDir, "result.uki")
+		resultFile = filepath.Join(resultDir, "result.uki.iso")
 
-		enki = NewEnki("enki-image", resultDir)
-		image = "busybox"
+		currentDir, err := os.Getwd()
+		Expect(err).ToNot(HaveOccurred())
+		keysDir = filepath.Join(currentDir, "assets", "keys")
+
+		enki = NewEnki("enki-image", resultDir, keysDir)
+		image = "quay.io/kairos/fedora:38-standard-amd64-generic-v2.5.0-k3sv1.28.5-k3s1"
 	})
 
 	AfterEach(func() {
@@ -31,11 +36,11 @@ var _ = Describe("build-uki", func() {
 
 	When("some dependency is missing", func() {
 		BeforeEach(func() {
-			enki = NewEnki("busybox", resultDir)
+			enki = NewEnki("busybox", resultDir, keysDir)
 		})
 
 		It("returns an error about missing deps", func() {
-			out, err := enki.Run("build-uki", image, resultFile)
+			out, err := enki.Run("build-uki", image, resultFile, "assets/keys")
 			Expect(err).To(HaveOccurred(), out)
 			Expect(out).To(Or(
 				MatchRegexp("executable file not found in \\$PATH"),
@@ -44,19 +49,15 @@ var _ = Describe("build-uki", func() {
 		})
 	})
 
-	It("successfully builds an UKI from a Docker image", func() {
-		out, err := enki.Run("build-uki", image, resultFile)
+	It("successfully builds a uki iso from a container image", func() {
+		out, err := enki.Run("build-uki", image, resultFile, keysDir)
 		Expect(err).ToNot(HaveOccurred(), out)
 
+		By("building the iso")
 		_, err = os.Stat(resultFile)
 		Expect(err).ToNot(HaveOccurred())
-	})
 
-	It("successfully builds a compressed version of the UKI file", func() {
-		out, err := enki.Run("build-uki", image, resultFile)
-		Expect(err).ToNot(HaveOccurred(), out)
-
-		_, err = os.Stat(resultFile + ".gz")
-		Expect(err).ToNot(HaveOccurred())
+		By("booting the iso")
+		// TODO: Move the uki test here from kairos?
 	})
 })

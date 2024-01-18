@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/u-root/u-root/pkg/cpio"
@@ -81,6 +82,8 @@ func (b *BuildUKIAction) Run() error {
 	if err := b.createISO(sourceDir); err != nil {
 		return err
 	}
+
+	b.logger.Info(fmt.Sprintf("Done buidling the iso file: %s", b.isoFile))
 
 	return nil
 }
@@ -357,36 +360,34 @@ func (b *BuildUKIAction) createConfFiles(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) createISO(sourceDir string) error {
-	tmpDir, err := os.MkdirTemp("", "enki-iso-dir-")
+	// isoDir is where we generate the img file. We pass this dir to xorriso.
+	isoDir, err := os.MkdirTemp("", "enki-iso-dir-")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(isoDir)
 
 	filesMap, err := b.imageFiles(sourceDir)
 	if err != nil {
 		return err
 	}
 
-	b.logger.Info("preparing a directory with the contents of the ISO")
-	if err := prepareISODir(filesMap, tmpDir); err != nil {
-		return err
-	}
-
 	b.logger.Info("calculating the size of the img file")
-	artifactSize, err := sumFileSizes(tmpDir)
+	artifactSize, err := sumFileSizes(filesMap)
 	if err != nil {
 		return err
 	}
 
 	// Create just the size we need + 50MB just in case
 	imgSize := artifactSize + 50
+	imgFile := filepath.Join(isoDir, "efiboot.img")
 	b.logger.Info(fmt.Sprintf("creating the img file with size: %dMb", imgSize))
-	imgFile, err := createImgWithSize(imgSize)
-	if err != nil {
+	if err = createImgWithSize(imgFile, imgSize); err != nil {
 		return err
 	}
 	defer os.Remove(imgFile)
+
+	b.logger.Info(fmt.Sprintf("created image: %s", imgFile))
 
 	b.logger.Info("creating directories in the img file")
 	if err := createImgDirs(imgFile, filesMap); err != nil {
@@ -400,7 +401,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 
 	b.logger.Info("creating the iso files with xorriso")
 	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
-		"-e", imgFile, "-no-emul-boot", "-o", b.isoFile, tmpDir)
+		"-e", filepath.Base(imgFile), "-no-emul-boot", "-o", b.isoFile, isoDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error creating iso file: %w\n%s", err, string(out))
@@ -485,63 +486,35 @@ func findKairosVersion(sourceDir string) (string, error) {
 	return match[1], nil
 }
 
-func createImgWithSize(size int64) (string, error) {
-	result, err := os.CreateTemp("", "enki-uki-*.img")
-	if err != nil {
-		return "", fmt.Errorf("creating a temporary img file: %w", err)
-	}
-
+func createImgWithSize(imgFile string, size int64) error {
 	cmd := exec.Command("dd",
-		"if=/dev/zero",
-		fmt.Sprintf("of=%s", result.Name()),
-		"bs=1M",
-		fmt.Sprintf("count=%d", size),
+		"if=/dev/zero", fmt.Sprintf("of=%s", imgFile),
+		"bs=1M", fmt.Sprintf("count=%d", size),
 	)
 
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("creating the img file: %w\n%s", err, out)
+		return fmt.Errorf("creating the img file: %w\n%s", err, out)
 	}
 
-	return result.Name(), nil
+	return nil
 }
 
-func sumFileSizes(dir string) (int64, error) {
+func sumFileSizes(filesMap map[string][]string) (int64, error) {
 	total := int64(0)
-	err := filepath.Walk(dir, func(filePath string, fileInfo os.FileInfo, err error) error {
-		total += fileInfo.Size()
-		return nil
-	})
+	for _, files := range maps.Values(filesMap) {
+		for _, f := range files {
+			fileInfo, err := os.Stat(f)
+			if err != nil {
+				return total, fmt.Errorf("finding file info for file %s: %w", f, err)
+			}
+			total += fileInfo.Size()
+		}
+	}
 
 	totalInMB := int64(math.Round(float64(total) / (1024 * 1024)))
 
-	return totalInMB, err
-}
-
-// prepareISODir copies all the needed files for the iso from the sourceDir
-// to the tmpDir
-func prepareISODir(filesMap map[string][]string, targetDir string) error {
-	for _, files := range maps.Values(filesMap) {
-		for _, f := range files {
-			sourceFile, err := os.Open(f)
-			if err != nil {
-				return err
-			}
-			defer sourceFile.Close()
-
-			destinationFile, err := os.Create(filepath.Join(targetDir, filepath.Base(f)))
-			if err != nil {
-				return err
-			}
-			defer destinationFile.Close()
-
-			_, err = io.Copy(destinationFile, sourceFile)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+	return totalInMB, nil
 }
 
 func createImgDirs(imgFile string, filesMap map[string][]string) error {
@@ -552,6 +525,7 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 	}
 
 	dirs := maps.Keys(filesMap)
+	sort.Strings(dirs) // Make sure we create outer dirs first
 	for _, dir := range dirs {
 		cmd := exec.Command("mmd", "-i", imgFile, dir)
 		out, err := cmd.CombinedOutput()
