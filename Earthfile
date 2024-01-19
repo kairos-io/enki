@@ -4,7 +4,7 @@ VERSION 0.7
 ARG --global GO_VERSION=1.20-alpine3.18
 
 enki-image:
-    FROM DOCKERFILE -f e2e/assets/enki-Dockerfile e2e/assets/
+    FROM DOCKERFILE -f e2e/assets/Dockerfile.enki e2e/assets/
 
     SAVE IMAGE enki-image
 
