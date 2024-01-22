@@ -111,8 +111,8 @@ func (b *BuildUKIAction) checkDeps() error {
 	}
 
 	neededFiles := []string{
-		// TODO: this should come from the given image, not the OS where enki runs
 		"/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
+		"/usr/lib/systemd/boot/efi/systemd-bootx64.efi",
 	}
 
 	for _, b := range neededBinaries {

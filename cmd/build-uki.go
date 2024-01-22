@@ -32,9 +32,7 @@ func NewBuildUKICmd() *cobra.Command {
 			"    - tpm2-pcr-private.pem\n",
 		Args: cobra.ExactArgs(3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			// TODO: is this needed? Can we avoid it?
-			// return CheckRoot()
-			return nil
+			return CheckRoot()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path, err := exec.LookPath("mount")
@@ -48,17 +46,9 @@ func NewBuildUKICmd() *cobra.Command {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}
 
-			//flags := cmd.Flags()
-
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cmd.SilenceUsage = true
 			cmd.SilenceErrors = true // Do not propagate errors down the line, we control them
-			// TODO: Do we need to read a spec? The only input should be an image.
-			// spec, err := config.ReadBuildISO(cfg, flags)
-			// if err != nil {
-			// 	cfg.Logger.Errorf("invalid install command setup %v", err)
-			// 	return err
-			// }
 
 			if len(args) == 0 {
 				cfg.Logger.Errorf("no image provided")
