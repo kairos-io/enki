@@ -27,6 +27,7 @@ import (
 	v1mock "github.com/kairos-io/kairos-agent/v2/tests/mocks"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/spf13/viper"
 	"github.com/twpayne/go-vfs"
 	"github.com/twpayne/go-vfs/vfst"
 	"os"
@@ -290,6 +291,17 @@ var _ = Describe("Utils", Label("utils"), func() {
 				{"mksquashfs", "source", "dest"},
 			})).To(BeNil())
 			Expect(err).To(HaveOccurred())
+		})
+	})
+	Describe("GetUkiCmdline", Label("GetUkiCmdline"), func() {
+		It("returns the default cmdline", func() {
+			cmdline := utils.GetUkiCmdline()
+			Expect(cmdline).To(Equal(constants.UkiCmdline))
+		})
+		It("returns the default cmdline with the cmdline flag", func() {
+			viper.Set("cmdline", "cmdline")
+			cmdline := utils.GetUkiCmdline()
+			Expect(cmdline).To(Equal(constants.UkiCmdline + " cmdline"))
 		})
 	})
 })

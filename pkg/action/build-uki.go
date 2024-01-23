@@ -1,8 +1,8 @@
 package action
 
 import (
-	"compress/gzip"
 	"fmt"
+	"github.com/kairos-io/enki/pkg/utils"
 	"io"
 	"math"
 	"os"
@@ -20,9 +20,8 @@ import (
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 )
 
-const Cmdline = "console=ttyS0 console=tty1 net.ifnames=1 rd.immucore.oemlabel=COS_OEM rd.immucore.debug rd.immucore.oemtimeout=2 rd.immucore.uki selinux=0"
-
 type BuildUKIAction struct {
+	cfg           *types.BuildConfig
 	img           *v1.ImageSource
 	e             *elemental.Elemental
 	isoFile       string
@@ -32,6 +31,7 @@ type BuildUKIAction struct {
 
 func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, result, keysDirectory string) *BuildUKIAction {
 	b := &BuildUKIAction{
+		cfg:           cfg,
 		logger:        cfg.Logger,
 		img:           img,
 		e:             elemental.NewElemental(&cfg.Config),
@@ -52,7 +52,7 @@ func (b *BuildUKIAction) Run() error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(sourceDir)
+	defer b.cfg.Fs.RemoveAll(sourceDir)
 
 	b.logger.Info("creating additional directories")
 	if err := b.setupDirectoriesAndFiles(sourceDir); err != nil {
@@ -89,13 +89,13 @@ func (b *BuildUKIAction) Run() error {
 }
 
 func (b *BuildUKIAction) extractImage() (string, error) {
-	tmpDir, err := os.MkdirTemp("", "enki-build-uki-")
+	tmpDir, err := utils.TempDir(b.cfg.Fs, "", "enki-build-uki-")
 	if err != nil {
 		return tmpDir, err
 	}
 
 	// By default MkdirTemp creates the dir with 0700 permissions, this results in an unusable system because all other users cannot access the sockets.
-	err = os.Chmod(tmpDir, 0755)
+	err = b.cfg.Fs.Chmod(tmpDir, 0755)
 	if err != nil {
 		return tmpDir, err
 	}
@@ -121,15 +121,15 @@ func (b *BuildUKIAction) checkDeps() error {
 		"/usr/lib/systemd/boot/efi/systemd-bootx64.efi",
 	}
 
-	for _, b := range neededBinaries {
-		_, err := exec.LookPath(b)
+	for _, binary := range neededBinaries {
+		_, err := exec.LookPath(binary)
 		if err != nil {
 			return err
 		}
 	}
 
-	for _, b := range neededFiles {
-		_, err := os.Stat(b)
+	for _, f := range neededFiles {
+		_, err := b.cfg.Fs.Stat(f)
 		if err != nil {
 			return err
 		}
@@ -139,22 +139,23 @@ func (b *BuildUKIAction) checkDeps() error {
 }
 
 func (b *BuildUKIAction) setupDirectoriesAndFiles(tmpDir string) error {
+	// TODO: upstream v1.FS should have a symlink method
 	if err := os.Symlink("/usr/bin/immucore", filepath.Join(tmpDir, "init")); err != nil {
 		return fmt.Errorf("error creating symlink: %w", err)
 	}
 
 	// able to mount oem under here if found
-	if err := os.MkdirAll(filepath.Join(tmpDir, "oem"), os.ModeDir); err != nil {
+	if err := utils.MkdirAll(b.cfg.Fs, filepath.Join(tmpDir, "oem"), os.ModeDir); err != nil {
 		return fmt.Errorf("error creating /oem dir: %w", err)
 	}
 
 	// mount the esp under here if found
-	if err := os.MkdirAll(filepath.Join(tmpDir, "efi"), os.ModeDir); err != nil {
+	if err := utils.MkdirAll(b.cfg.Fs, filepath.Join(tmpDir, "efi"), os.ModeDir); err != nil {
 		return fmt.Errorf("error creating /oem dir: %w", err)
 	}
 
 	// for install/upgrade they copy stuff there
-	if err := os.MkdirAll(filepath.Join(tmpDir, "usr/local/cloud-config"), os.ModeDir); err != nil {
+	if err := utils.MkdirAll(b.cfg.Fs, filepath.Join(tmpDir, "usr/local/cloud-config"), os.ModeDir); err != nil {
 		return fmt.Errorf("error creating /oem dir: %w", err)
 	}
 
@@ -171,7 +172,7 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 	}
 
 	cpioFileName := filepath.Join(sourceDir, "initramfs.cpio")
-	cpioFile, err := os.Create(cpioFileName)
+	cpioFile, err := b.cfg.Fs.Create(cpioFileName)
 	if err != nil {
 		return fmt.Errorf("creating cpio file: %w", err)
 	}
@@ -228,11 +229,11 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 		return fmt.Errorf("error writing trailer record: %w", err)
 	}
 
-	if err := GzipFile(cpioFileName, "initrd"); err != nil {
+	if err := utils.GzipFile(b.cfg.Fs, cpioFileName, "initrd"); err != nil {
 		return err
 	}
 
-	if err := os.RemoveAll(cpioFileName); err != nil {
+	if err := b.cfg.Fs.RemoveAll(cpioFileName); err != nil {
 		return fmt.Errorf("error deleting cpio file: %w", err)
 	}
 
@@ -240,6 +241,8 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) uname(sourceDir string) (string, error) {
+	// TODO: we consume kairos images here, they should all have the modules pointing to the image at /usr/lib/modules ?
+	// We already do this on kairos `ls /lib/modules | head -n1` should it be easier to do it here instead?
 	files, err := filepath.Glob(filepath.Join(sourceDir, "boot", "vmlinuz-*"))
 	if err != nil {
 		return "", fmt.Errorf("getting file list: %w", err)
@@ -267,19 +270,19 @@ func (b *BuildUKIAction) uname(sourceDir string) (string, error) {
 }
 
 func (b *BuildUKIAction) copyKernel(sourceDir string) error {
-	linkTarget, err := os.Readlink(filepath.Join(sourceDir, "boot", "vmlinuz"))
+	linkTarget, err := b.cfg.Fs.Readlink(filepath.Join(sourceDir, "boot", "vmlinuz"))
 	if err != nil {
 		return err
 	}
 
 	kernelFile := filepath.Base(linkTarget)
-	sourceFile, err := os.Open(filepath.Join(sourceDir, "boot", kernelFile))
+	sourceFile, err := b.cfg.Fs.Open(filepath.Join(sourceDir, "boot", kernelFile))
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(filepath.Join(sourceDir, "vmlinuz"))
+	destinationFile, err := b.cfg.Fs.Create(filepath.Join(sourceDir, "vmlinuz"))
 	if err != nil {
 		return err
 	}
@@ -305,15 +308,15 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 		return err
 	}
 
-	kairosVersion, err := findKairosVersion(sourceDir)
+	kairosVersion, err := utils.FindKairosVersion(b.cfg.Fs, sourceDir)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.Command("/usr/lib/systemd/ukify",
+	out, err := b.cfg.Runner.Run("/usr/lib/systemd/ukify",
 		"--linux", "vmlinuz",
 		"--initrd", "initrd",
-		"--cmdline", Cmdline,
+		"--cmdline", utils.GetUkiCmdline(),
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
 		"--uname", uname,
 		"--stub", "/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
@@ -325,7 +328,6 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 		"build",
 	)
 
-	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("running ukify: %w\n%s", err, string(out))
 	}
@@ -335,14 +337,13 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 // TODO: the efi file should come from the downloaded image, not from the
 // enki running OS.
 func (b *BuildUKIAction) sbSign(sourceDir string) error {
-	cmd := exec.Command("sbsign",
+	out, err := b.cfg.Runner.Run("sbsign",
 		"--key", filepath.Join(b.keysDirectory, "DB.key"),
 		"--cert", filepath.Join(b.keysDirectory, "DB.crt"),
 		"--output", filepath.Join(sourceDir, "BOOTX64.EFI"),
 		"/usr/lib/systemd/boot/efi/systemd-bootx64.efi",
 	)
 
-	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("running sbsign: %w\n%s", err, string(out))
 	}
@@ -350,18 +351,18 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) createConfFiles(sourceDir string) error {
-	kairosVersion, err := findKairosVersion(sourceDir)
+	kairosVersion, err := utils.FindKairosVersion(b.cfg.Fs, sourceDir)
 	if err != nil {
 		return err
 	}
 	data := fmt.Sprintf("title Kairos %[1]s\nefi /EFI/kairos/%[1]s.efi\nversion %[1]s", kairosVersion)
-	err = os.WriteFile(filepath.Join(sourceDir, kairosVersion+".conf"), []byte(data), os.ModePerm)
+	err = b.cfg.Fs.WriteFile(filepath.Join(sourceDir, kairosVersion+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", kairosVersion)
 	}
 
 	data = "default @saved\ntimeout 5\nconsole-mode max\neditor no\n"
-	err = os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
+	err = b.cfg.Fs.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the loader.conf file")
 	}
@@ -371,11 +372,11 @@ func (b *BuildUKIAction) createConfFiles(sourceDir string) error {
 
 func (b *BuildUKIAction) createISO(sourceDir string) error {
 	// isoDir is where we generate the img file. We pass this dir to xorriso.
-	isoDir, err := os.MkdirTemp("", "enki-iso-dir-")
+	isoDir, err := utils.TempDir(b.cfg.Fs, "", "enki-iso-dir-")
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(isoDir)
+	defer b.cfg.Fs.RemoveAll(isoDir)
 
 	filesMap, err := b.imageFiles(sourceDir)
 	if err != nil {
@@ -383,7 +384,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	}
 
 	b.logger.Info("calculating the size of the img file")
-	artifactSize, err := sumFileSizes(filesMap)
+	artifactSize, err := sumFileSizes(b.cfg.Fs, filesMap)
 	if err != nil {
 		return err
 	}
@@ -392,27 +393,26 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	imgSize := artifactSize + 50
 	imgFile := filepath.Join(isoDir, "efiboot.img")
 	b.logger.Info(fmt.Sprintf("creating the img file with size: %dMb", imgSize))
-	if err = createImgWithSize(imgFile, imgSize); err != nil {
+	if err = createImgWithSize(b.cfg.Runner, imgFile, imgSize); err != nil {
 		return err
 	}
-	defer os.Remove(imgFile)
+	defer b.cfg.Fs.Remove(imgFile)
 
 	b.logger.Info(fmt.Sprintf("created image: %s", imgFile))
 
 	b.logger.Info("creating directories in the img file")
-	if err := createImgDirs(imgFile, filesMap); err != nil {
+	if err := createImgDirs(b.cfg.Runner, imgFile, filesMap); err != nil {
 		return err
 	}
 
 	b.logger.Info("copying files in the img file")
-	if err := copyFilesToImg(imgFile, filesMap); err != nil {
+	if err := copyFilesToImg(b.cfg.Runner, imgFile, filesMap); err != nil {
 		return err
 	}
 
 	b.logger.Info("creating the iso files with xorriso")
-	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
+	out, err := b.cfg.Runner.Run("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
 		"-e", filepath.Base(imgFile), "-no-emul-boot", "-o", b.isoFile, isoDir)
-	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error creating iso file: %w\n%s", err, string(out))
 	}
@@ -421,7 +421,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, error) {
-	kairosVersion, err := findKairosVersion(sourceDir)
+	kairosVersion, err := utils.FindKairosVersion(b.cfg.Fs, sourceDir)
 	if err != nil {
 		return map[string][]string{}, err
 	}
@@ -443,11 +443,10 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	}, nil
 }
 
-func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
+func copyFilesToImg(runner v1.Runner, imgFile string, filesMap map[string][]string) error {
 	for dir, files := range filesMap {
 		for _, f := range files {
-			cmd := exec.Command("mcopy", "-i", imgFile, f, filepath.Join(dir, filepath.Base(f)))
-			out, err := cmd.CombinedOutput()
+			out, err := runner.Run("mcopy", "-i", imgFile, f, filepath.Join(dir, filepath.Base(f)))
 			if err != nil {
 				return fmt.Errorf("copying %s in img file: %w\n%s", f, err, string(out))
 			}
@@ -457,52 +456,13 @@ func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
 	return nil
 }
 
-func GzipFile(sourcePath, targetPath string) error {
-	inputFile, err := os.Open(sourcePath)
-	if err != nil {
-		return fmt.Errorf("error opening initramfs file: %w", err)
-	}
-	defer inputFile.Close()
-
-	outputFile, err := os.Create(targetPath)
-	if err != nil {
-		return fmt.Errorf("error creating compressed initramfs file: %w", err)
-	}
-	defer outputFile.Close()
-
-	gzipWriter := gzip.NewWriter(outputFile)
-	defer gzipWriter.Close()
-
-	if _, err = io.Copy(gzipWriter, inputFile); err != nil {
-		return fmt.Errorf("error writing data to the compress initramfs file: %w", err)
-	}
-
-	return nil
-}
-
-func findKairosVersion(sourceDir string) (string, error) {
-	osReleaseBytes, err := os.ReadFile(filepath.Join(sourceDir, "etc", "os-release"))
-	if err != nil {
-		return "", fmt.Errorf("reading os-release file: %w", err)
-	}
-
-	re := regexp.MustCompile("(?m)^KAIROS_RELEASE=\"(.*)\"")
-	match := re.FindStringSubmatch(string(osReleaseBytes))
-
-	if len(match) != 2 {
-		return "", fmt.Errorf("unexpected number of matches for KAIROS_RELEASE in os-release: %d", len(match))
-	}
-
-	return match[1], nil
-}
-
-func createImgWithSize(imgFile string, size int64) error {
-	cmd := exec.Command("dd",
+func createImgWithSize(runner v1.Runner, imgFile string, size int64) error {
+	// TODO: Sub by os.Truncate?
+	out, err := runner.Run("dd",
 		"if=/dev/zero", fmt.Sprintf("of=%s", imgFile),
 		"bs=1M", fmt.Sprintf("count=%d", size),
 	)
 
-	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("creating the img file: %w\n%s", err, out)
 	}
@@ -510,11 +470,11 @@ func createImgWithSize(imgFile string, size int64) error {
 	return nil
 }
 
-func sumFileSizes(filesMap map[string][]string) (int64, error) {
+func sumFileSizes(fs v1.FS, filesMap map[string][]string) (int64, error) {
 	total := int64(0)
 	for _, files := range maps.Values(filesMap) {
 		for _, f := range files {
-			fileInfo, err := os.Stat(f)
+			fileInfo, err := fs.Stat(f)
 			if err != nil {
 				return total, fmt.Errorf("finding file info for file %s: %w", f, err)
 			}
@@ -527,9 +487,8 @@ func sumFileSizes(filesMap map[string][]string) (int64, error) {
 	return totalInMB, nil
 }
 
-func createImgDirs(imgFile string, filesMap map[string][]string) error {
-	cmd := exec.Command("mkfs.msdos", "-F", "32", imgFile)
-	out, err := cmd.CombinedOutput()
+func createImgDirs(runner v1.Runner, imgFile string, filesMap map[string][]string) error {
+	out, err := runner.Run("mkfs.msdos", "-F", "32", imgFile)
 	if err != nil {
 		return fmt.Errorf("formating the img file to fat: %w\n%s", err, string(out))
 	}
@@ -537,10 +496,9 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 	dirs := maps.Keys(filesMap)
 	sort.Strings(dirs) // Make sure we create outer dirs first
 	for _, dir := range dirs {
-		cmd := exec.Command("mmd", "-i", imgFile, dir)
-		out, err := cmd.CombinedOutput()
+		out, err := runner.Run("mmd", "-i", imgFile, dir)
 		if err != nil {
-			return fmt.Errorf("creating directory %s on the img file: %w\n%s\nThe failed command was: %s", dir, err, string(out), cmd.String())
+			return fmt.Errorf("creating directory %s on the img file: %w\n%s\n", dir, err, string(out))
 		}
 	}
 

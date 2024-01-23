@@ -78,6 +78,7 @@ func NewBuildUKICmd() *cobra.Command {
 	// c.Flags().StringP("output", "o", "", "Output directory (defaults to current directory)")
 	// c.Flags().Bool("date", false, "Adds a date suffix into the generated ISO file")
 	// c.Flags().String("label", "", "Label of the ISO volume")
+	c.Flags().String("cmdline", "", "Kernel command line")
 	return c
 }
 
