@@ -94,6 +94,12 @@ func (b *BuildUKIAction) extractImage() (string, error) {
 		return tmpDir, err
 	}
 
+	// By default MkdirTemp creates the dir with 0700 permissions, this results in an unusable system because all other users cannot access the sockets.
+	err = os.Chmod(tmpDir, 0755)
+	if err != nil {
+		return tmpDir, err
+	}
+
 	_, err = b.e.DumpSource(tmpDir, b.img)
 
 	return tmpDir, err
@@ -176,11 +182,11 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 
 	// List of directories to exclude
 	excludeDirs := map[string]bool{
-		"./sys":  true,
-		"./run":  true,
-		"./dev":  true,
-		"./tmp":  true,
-		"./proc": true,
+		"sys":  true,
+		"run":  true,
+		"dev":  true,
+		"tmp":  true,
+		"proc": true,
 	}
 
 	if err = os.Chdir(sourceDir); err != nil {
@@ -194,8 +200,12 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 		}
 
 		// Check if the current directory should be excluded
-		if excludeDirs[filePath] {
+		if fileInfo.IsDir() && excludeDirs[filePath] {
 			return filepath.SkipDir
+		}
+
+		if strings.Contains(filePath, "initramfs.cpio") {
+			return nil
 		}
 
 		rec, err := cr.GetRecord(filePath)
