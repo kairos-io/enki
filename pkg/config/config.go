@@ -1,6 +1,12 @@
 package config
 
 import (
+	"io"
+	"io/fs"
+	"os"
+	"reflect"
+	"runtime"
+
 	"github.com/kairos-io/enki/internal/version"
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/kairos-io/enki/pkg/types"
@@ -15,12 +21,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/twpayne/go-vfs"
-	"io"
-	"io/fs"
 	"k8s.io/mount-utils"
-	"os"
-	"reflect"
-	"runtime"
 )
 
 var decodeHook = viper.DecodeHook(
@@ -102,7 +103,10 @@ func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Inter
 		configDir = "."
 	}
 
+	// TODO: Why didn't we set an ImageExtractor?
+	// How is build-iso used? What does it set it to and where? (the viper config below?)
 	cfg := NewBuildConfig(
+		WithImageExtractor(v1.OCIImageExtractor{}),
 		WithLogger(logger),
 		WithMounter(mounter),
 	)

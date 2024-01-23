@@ -1,5 +1,5 @@
 ---
-name: 'Enki unit tests'
+name: 'Enki tests'
 
 on:
   pull_request:

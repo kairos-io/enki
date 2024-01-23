@@ -1,0 +1,4 @@
+# A docker images suitable to run `enki build-uki` in it
+FROM fedora:39
+
+RUN dnf install -y binutils systemd-boot mtools efitools sbsigntools shim openssl systemd-ukify dosfstools mtools xorriso
