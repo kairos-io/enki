@@ -15,6 +15,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/twpayne/go-vfs v1.7.2
 	github.com/u-root/u-root v0.12.0
+	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
 	k8s.io/mount-utils v0.27.4
 )
 
@@ -135,7 +136,6 @@ require (
 	github.com/zcalusic/sysinfo v1.0.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/crypto v0.17.0 // indirect
-	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848 // indirect
 	golang.org/x/mod v0.14.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
