@@ -27,10 +27,11 @@ func NewGenkeyCmd() *cobra.Command {
 				return err
 			}
 			l := cfg.Logger
-			uid := uuid.NewV5(uuid.NamespaceDNS, args[0])
+			name := args[0]
+			uid := uuid.NewV5(uuid.NamespaceDNS, name)
 			output, _ := cobraCmd.Flags().GetString("output")
 
-			err = os.MkdirAll(output, 0755)
+			err = os.MkdirAll(output, 0700)
 			if err != nil {
 				l.Errorf("Error creating output directory: %s", err)
 				return err
@@ -45,7 +46,7 @@ func NewGenkeyCmd() *cobra.Command {
 				esl := filepath.Join(output, fmt.Sprintf("%s.esl", t))
 				cmd := exec.Command(
 					"openssl",
-					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s/", args[0]),
+					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s/", name),
 					"-keyout", key,
 					"-out", pem,
 				)
