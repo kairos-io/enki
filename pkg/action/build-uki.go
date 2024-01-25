@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/sanity-io/litter"
 	"github.com/u-root/u-root/pkg/cpio"
 	"golang.org/x/exp/maps"
 
@@ -37,6 +38,7 @@ func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, result, keys
 		isoFile:       result,
 		keysDirectory: keysDirectory,
 	}
+	b.logger.Debugf("BuildUKIAction: %+v", litter.Sdump(b))
 	return b
 }
 
@@ -317,7 +319,7 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 		"--uname", uname,
 		"--stub", "/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
 		"--secureboot-private-key", filepath.Join(b.keysDirectory, "DB.key"),
-		"--secureboot-certificate", filepath.Join(b.keysDirectory, "DB.crt"),
+		"--secureboot-certificate", filepath.Join(b.keysDirectory, "DB.pem"),
 		"--pcr-private-key", filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
 		"--measure",
 		"--output", filepath.Join(sourceDir, kairosVersion+".efi"),
@@ -336,7 +338,7 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 func (b *BuildUKIAction) sbSign(sourceDir string) error {
 	cmd := exec.Command("sbsign",
 		"--key", filepath.Join(b.keysDirectory, "DB.key"),
-		"--cert", filepath.Join(b.keysDirectory, "DB.crt"),
+		"--cert", filepath.Join(b.keysDirectory, "DB.pem"),
 		"--output", filepath.Join(sourceDir, "BOOTX64.EFI"),
 		"/usr/lib/systemd/boot/efi/systemd-bootx64.efi",
 	)
