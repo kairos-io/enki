@@ -15,15 +15,13 @@ import (
 // the root command.
 func NewBuildUKICmd() *cobra.Command {
 	c := &cobra.Command{
-		Use:   "build-uki SourceImage ResultFile KeysDirectory",
+		Use:   "build-uki SourceImage",
 		Short: "Build a UKI artifact from a container image",
 		Long: "Build a UKI artifact from a container image\n\n" +
 			"SourceImage - should be provided as uri in following format <sourceType>:<sourceName>\n" +
 			"    * <sourceType> - might be [\"dir\", \"file\", \"oci\", \"docker\"], as default is \"docker\"\n" +
 			"    * <sourceName> - is path to file or directory, image name with tag version" +
-			"ResultFile - the path to the resulting iso file\n" +
-			"KeysDirectory - the path to the directory with the signing keys.\n" +
-			"    The following files are expected in this directory:\n" +
+			"The following files are expected inside the keys directory:\n" +
 			"    - DB.crt\n" +
 			"    - DB.der\n" +
 			"    - DB.key\n" +
@@ -33,7 +31,7 @@ func NewBuildUKICmd() *cobra.Command {
 			"    - PK.der\n" +
 			"    - PK.auth\n" +
 			"    - tpm2-pcr-private.pem\n",
-		Args: cobra.ExactArgs(3),
+		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
 			return CheckRoot()
 		},
@@ -64,7 +62,10 @@ func NewBuildUKICmd() *cobra.Command {
 				return err
 			}
 
-			a := action.NewBuildUKIAction(cfg, imgSource, args[1], args[2])
+			flags := cmd.Flags()
+			outputFile, _ := flags.GetString("output")
+			keysDir, _ := flags.GetString("keys")
+			a := action.NewBuildUKIAction(cfg, imgSource, outputFile, keysDir)
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
@@ -75,12 +76,9 @@ func NewBuildUKICmd() *cobra.Command {
 		},
 	}
 
-	// TODO: Implement these? We can keep it simple by using the artifact name
-	// from the image's os-release file.
-	// c.Flags().StringP("name", "n", "", "Basename of the generated ISO file")
-	// c.Flags().StringP("output", "o", "", "Output directory (defaults to current directory)")
-	// c.Flags().Bool("date", false, "Adds a date suffix into the generated ISO file")
-	// c.Flags().String("label", "", "Label of the ISO volume")
+	c.Flags().StringP("output", "o", "output.uki.iso", "Output file name")
+	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
+	c.MarkFlagRequired("keys")
 	return c
 }
 
