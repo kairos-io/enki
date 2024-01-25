@@ -299,9 +299,9 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(cmdline).To(Equal(constants.UkiCmdline))
 		})
 		It("returns the default cmdline with the cmdline flag", func() {
-			viper.Set("cmdline", "cmdline")
+			viper.Set("cmdline", "key=value testkey")
 			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline).To(Equal(constants.UkiCmdline + " cmdline"))
+			Expect(cmdline).To(Equal(constants.UkiCmdline + " key=value testkey"))
 		})
 	})
 })
