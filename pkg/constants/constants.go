@@ -38,9 +38,10 @@ const (
 	NoWriteDirPerm = 0555 | os.ModeDir
 	TempDirPerm    = os.ModePerm | os.ModeSticky | os.ModeDir
 
-	ArchAmd64 = "amd64"
-	Archx86   = "x86_64"
-	ArchArm64 = "arm64"
+	ArchAmd64  = "amd64"
+	Archx86    = "x86_64"
+	ArchArm64  = "arm64"
+	UkiCmdline = "console=ttyS0 console=tty1 net.ifnames=1 rd.immucore.oemlabel=COS_OEM rd.immucore.debug rd.immucore.oemtimeout=2 rd.immucore.uki selinux=0"
 )
 
 // GetDefaultSquashfsOptions returns the default options to use when creating a squashfs
