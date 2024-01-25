@@ -27,8 +27,11 @@ func NewBuildUKICmd() *cobra.Command {
 			"    - DB.crt\n" +
 			"    - DB.der\n" +
 			"    - DB.key\n" +
+			"    - DB.auth\n" +
 			"    - KEK.der\n" +
+			"    - KEK.auth\n" +
 			"    - PK.der\n" +
+			"    - PK.auth\n" +
 			"    - tpm2-pcr-private.pem\n",
 		Args: cobra.ExactArgs(3),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
