@@ -17,6 +17,14 @@ RUN go build \
     -X github.com/kairos-io/enki/internal/version.gitCommit=$ENKI_COMMIT" \
     -o /enki
 
+FROM fedora as tools-image
+
+RUN dnf install -y binutils systemd-boot mtools efitools sbsigntools shim openssl systemd-ukify dosfstools xorriso
+
+COPY --from=builder /enki /enki
+
+ENTRYPOINT ["/enki"]
+
 FROM gcr.io/kaniko-project/executor:latest
 
 COPY --from=builder /enki /enki
