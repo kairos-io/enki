@@ -2,9 +2,8 @@ module github.com/kairos-io/enki
 
 go 1.21
 
-toolchain go1.21.6
-
 require (
+	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/kairos-io/kairos-agent/v2 v2.6.2
 	github.com/kairos-io/kairos-sdk v0.0.24-0.20240112092053-c21aa7f149cb
 	github.com/mitchellh/mapstructure v1.5.0
