@@ -7,8 +7,8 @@ require (
 	github.com/kairos-io/kairos-agent/v2 v2.6.2
 	github.com/kairos-io/kairos-sdk v0.0.24-0.20240112092053-c21aa7f149cb
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/onsi/ginkgo/v2 v2.13.2
-	github.com/onsi/gomega v1.30.0
+	github.com/onsi/ginkgo/v2 v2.15.0
+	github.com/onsi/gomega v1.31.1
 	github.com/sanity-io/litter v1.5.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
