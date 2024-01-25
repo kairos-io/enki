@@ -40,7 +40,7 @@ var _ = Describe("build-uki", func() {
 		})
 
 		It("returns an error about missing deps", func() {
-			out, err := enki.Run("build-uki", image, resultFile, "assets/keys")
+			out, err := enki.Run("build-uki", image, "-o", resultFile, "-k", "assets/keys")
 			Expect(err).To(HaveOccurred(), out)
 			Expect(out).To(Or(
 				MatchRegexp("executable file not found in \\$PATH"),
@@ -50,7 +50,7 @@ var _ = Describe("build-uki", func() {
 	})
 
 	It("successfully builds a uki iso from a container image", func() {
-		out, err := enki.Run("build-uki", image, resultFile, keysDir)
+		out, err := enki.Run("build-uki", image, "-o", resultFile, "-k", keysDir)
 		Expect(err).ToNot(HaveOccurred(), out)
 
 		By("building the iso")
