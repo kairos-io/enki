@@ -16,11 +16,10 @@ import (
 	"golang.org/x/exp/maps"
 
 	"github.com/kairos-io/enki/pkg/types"
+	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 )
-
-const Cmdline = "console=ttyS0 console=tty1 net.ifnames=1 rd.immucore.oemlabel=COS_OEM rd.immucore.debug rd.immucore.oemtimeout=2 rd.immucore.uki selinux=0"
 
 type BuildUKIAction struct {
 	img           *v1.ImageSource
@@ -313,7 +312,7 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 	cmd := exec.Command("/usr/lib/systemd/ukify",
 		"--linux", "vmlinuz",
 		"--initrd", "initrd",
-		"--cmdline", Cmdline,
+		"--cmdline", utils.GetUkiCmdline(),
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
 		"--uname", uname,
 		"--stub", "/usr/lib/systemd/boot/efi/linuxx64.efi.stub",

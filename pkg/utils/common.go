@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	"github.com/spf13/viper"
 	"strings"
 )
 
@@ -36,5 +37,16 @@ func GolangArchToArch(arch string) (string, error) {
 		return constants.ArchArm64, nil
 	default:
 		return "", fmt.Errorf("invalid arch")
+	}
+}
+
+// GetUkiCmdline returns the cmdline to be used for the kernel.
+// The cmdline can be overridden by the user using the cmdline flag.
+func GetUkiCmdline() string {
+	cmdlineOverride := viper.GetString("cmdline")
+	if cmdlineOverride == "" {
+		return constants.UkiCmdline
+	} else {
+		return constants.UkiCmdline + " " + strings.Trim(cmdlineOverride, " ")
 	}
 }
