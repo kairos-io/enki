@@ -1,7 +1,7 @@
 VERSION 0.7
 
 # renovate: datasource=docker depName=golang
-ARG --global GO_VERSION=1.20-alpine3.18
+ARG --global GO_VERSION=1.21-alpine3.18
 
 enki-image:
     FROM DOCKERFILE -f e2e/assets/Dockerfile.enki e2e/assets/

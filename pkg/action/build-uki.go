@@ -436,10 +436,13 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 		"::loader":         {filepath.Join(sourceDir, "loader.conf")},
 		"::loader/entries": {filepath.Join(sourceDir, kairosVersion+".conf")},
 		"::loader/keys":    {},
-		"::loader/keys/kairos": {
+		"::loader/keys/auto": {
 			filepath.Join(b.keysDirectory, "PK.der"),
 			filepath.Join(b.keysDirectory, "KEK.der"),
-			filepath.Join(b.keysDirectory, "DB.der")},
+			filepath.Join(b.keysDirectory, "DB.der"),
+			filepath.Join(b.keysDirectory, "PK.auth"),
+			filepath.Join(b.keysDirectory, "KEK.auth"),
+			filepath.Join(b.keysDirectory, "DB.auth")},
 	}, nil
 }
 

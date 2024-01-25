@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
-          git fetch --prune --unshallow
+        with:
+          fetch-depth: 0
       - name: Generate version
         run: echo "VERSION=$(git describe --always --tags --dirty)" >> $GITHUB_ENV
       - name: Set up Go
