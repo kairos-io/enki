@@ -369,13 +369,15 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	extraCmdline := strings.TrimPrefix(cmdline, constants.UkiCmdline)
 	// Add some  ( ) around the extra cmdline if it's not empty for a nicer display
 	if extraCmdline != "" {
-		cmdlineForConf = fmt.Sprintf("(%s)", extraCmdline)
+		cmdlineForConf = fmt.Sprintf("(%s)", strings.Trim(extraCmdline, " "))
 	} else {
 		// Empty extra cmdline, we don't want to display anything
 		cmdlineForConf = extraCmdline
 	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
-	data := fmt.Sprintf("title Kairos %s %s\nefi /EFI/kairos/%s.efi\nversion %s", kairosVersion, cmdlineForConf, finalEfiName, kairosVersion)
+	// You can add entries into the config files, they will be ignored by systemd-boot
+	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
+	data := fmt.Sprintf("title Kairos %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s", kairosVersion, cmdlineForConf, finalEfiName, kairosVersion, strings.Trim(extraCmdline, " "))
 	err = os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
