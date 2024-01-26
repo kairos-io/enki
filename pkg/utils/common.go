@@ -48,7 +48,7 @@ func GetUkiCmdline() []string {
 	if len(cmdlineOverride) == 0 {
 		return []string{constants.UkiCmdline}
 	} else {
-		var cmdline []string
+		cmdline := []string{constants.UkiCmdline}
 		for _, line := range cmdlineOverride {
 			cmdline = append(cmdline, fmt.Sprintf("%s %s", constants.UkiCmdline, line))
 		}
