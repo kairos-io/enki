@@ -3,6 +3,7 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/kairos-io/enki/pkg/constants"
 	"io"
 	"math"
 	"os"
@@ -65,18 +66,20 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
-	b.logger.Info("running ukify")
-	if err := b.ukify(sourceDir); err != nil {
-		return err
+	cmdlines := utils.GetUkiCmdline()
+	for _, cmdline := range cmdlines {
+		b.logger.Info("running ukify for cmdline: " + cmdline)
+		if err := b.ukify(sourceDir, cmdline); err != nil {
+			return err
+		}
+		b.logger.Info("creating kairos and loader conf files")
+		if err := b.createConfFiles(sourceDir, cmdline); err != nil {
+			return err
+		}
 	}
 
-	b.logger.Info("running sgsign")
+	b.logger.Info("running sbsign")
 	if err := b.sbSign(sourceDir); err != nil {
-		return err
-	}
-
-	b.logger.Info("creating kairos and loader conf files")
-	if err := b.createConfFiles(sourceDir); err != nil {
 		return err
 	}
 
@@ -84,7 +87,7 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
-	b.logger.Info(fmt.Sprintf("Done buidling the iso file: %s", b.isoFile))
+	b.logger.Info(fmt.Sprintf("Done building the iso file: %s", b.isoFile))
 
 	return nil
 }
@@ -291,7 +294,7 @@ func (b *BuildUKIAction) copyKernel(sourceDir string) error {
 	return err
 }
 
-func (b *BuildUKIAction) ukify(sourceDir string) error {
+func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	// Normally that's still the current dir but just making sure.
 	if err := os.Chdir(sourceDir); err != nil {
 		return fmt.Errorf("changing to %s directory: %w", sourceDir, err)
@@ -311,10 +314,15 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 		return err
 	}
 
+	// name: kairosVersion + cmdline + .efi
+	// for the cmdline, we remove the shared cmdline avalues and only keep the extra values added by the user
+	// we also replace spaces with underscores
+	finalEfiName := kairosVersion + strings.Replace(strings.TrimPrefix(cmdline, constants.UkiCmdline), " ", "_", -1) + ".efi"
+	b.logger.Infof("Generating: " + finalEfiName)
 	cmd := exec.Command("/usr/lib/systemd/ukify",
 		"--linux", "vmlinuz",
 		"--initrd", "initrd",
-		"--cmdline", utils.GetUkiCmdline(),
+		"--cmdline", cmdline,
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
 		"--uname", uname,
 		"--stub", "/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
@@ -322,7 +330,7 @@ func (b *BuildUKIAction) ukify(sourceDir string) error {
 		"--secureboot-certificate", filepath.Join(b.keysDirectory, "DB.pem"),
 		"--pcr-private-key", filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
 		"--measure",
-		"--output", filepath.Join(sourceDir, kairosVersion+".efi"),
+		"--output", finalEfiName,
 		"build",
 	)
 
@@ -350,15 +358,29 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 	return nil
 }
 
-func (b *BuildUKIAction) createConfFiles(sourceDir string) error {
+func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
+	var cmdlineForConf string
 	kairosVersion, err := findKairosVersion(sourceDir)
 	if err != nil {
 		return err
 	}
-	data := fmt.Sprintf("title Kairos %[1]s\nefi /EFI/kairos/%[1]s.efi\nversion %[1]s", kairosVersion)
-	err = os.WriteFile(filepath.Join(sourceDir, kairosVersion+".conf"), []byte(data), os.ModePerm)
+	finalEfiName := kairosVersion + strings.Replace(strings.TrimPrefix(cmdline, constants.UkiCmdline), " ", "_", -1)
+	// For the config title we get only the extra cmdline we added, no replacement of spaces with underscores needed
+	extraCmdline := strings.TrimPrefix(cmdline, constants.UkiCmdline)
+	// Add some  ( ) around the extra cmdline if it's not empty for a nicer display
+	if extraCmdline != "" {
+		cmdlineForConf = fmt.Sprintf("(%s)", strings.Trim(extraCmdline, " "))
+	} else {
+		// Empty extra cmdline, we don't want to display anything
+		cmdlineForConf = extraCmdline
+	}
+	b.logger.Infof("Creating the %s.conf file", finalEfiName)
+	// You can add entries into the config files, they will be ignored by systemd-boot
+	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
+	data := fmt.Sprintf("title Kairos %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s", kairosVersion, cmdlineForConf, finalEfiName, kairosVersion, strings.Trim(extraCmdline, " "))
+	err = os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
-		return fmt.Errorf("creating the %s.conf file", kairosVersion)
+		return fmt.Errorf("creating the %s.conf file", finalEfiName)
 	}
 
 	data = "default @saved\ntimeout 5\nconsole-mode max\neditor no\n"
@@ -429,13 +451,13 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 
 	// the keys are the target dirs
 	// the values are the source files that should be copied into the target dir
-	return map[string][]string{
+	data := map[string][]string{
 		"::EFI":            {},
 		"::EFI/BOOT":       {filepath.Join(sourceDir, "BOOTX64.EFI")},
-		"::EFI/kairos":     {filepath.Join(sourceDir, kairosVersion+".efi")},
+		"::EFI/kairos":     {},
 		"::EFI/tools":      {},
 		"::loader":         {filepath.Join(sourceDir, "loader.conf")},
-		"::loader/entries": {filepath.Join(sourceDir, kairosVersion+".conf")},
+		"::loader/entries": {},
 		"::loader/keys":    {},
 		"::loader/keys/auto": {
 			filepath.Join(b.keysDirectory, "PK.der"),
@@ -444,7 +466,15 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 			filepath.Join(b.keysDirectory, "PK.auth"),
 			filepath.Join(b.keysDirectory, "KEK.auth"),
 			filepath.Join(b.keysDirectory, "DB.auth")},
-	}, nil
+	}
+	// Add the kairos efi files and the loader conf files for each cmdline
+	cmdlines := utils.GetUkiCmdline()
+	for _, cmdline := range cmdlines {
+		finalEfiName := kairosVersion + strings.Replace(strings.TrimPrefix(cmdline, constants.UkiCmdline), " ", "_", -1)
+		data["::EFI/kairos"] = append(data["::EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
+		data["::loader/entries"] = append(data["::loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
+	}
+	return data, nil
 }
 
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {

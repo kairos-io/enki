@@ -42,11 +42,17 @@ func GolangArchToArch(arch string) (string, error) {
 
 // GetUkiCmdline returns the cmdline to be used for the kernel.
 // The cmdline can be overridden by the user using the cmdline flag.
-func GetUkiCmdline() string {
-	cmdlineOverride := viper.GetString("cmdline")
-	if cmdlineOverride == "" {
-		return constants.UkiCmdline
+// For each cmdline passed, we generate a uki file with that cmdline
+func GetUkiCmdline() []string {
+	cmdlineOverride := viper.GetStringSlice("cmdline")
+	if len(cmdlineOverride) == 0 {
+		return []string{constants.UkiCmdline}
 	} else {
-		return constants.UkiCmdline + " " + strings.Trim(cmdlineOverride, " ")
+		var cmdline []string
+		for _, line := range cmdlineOverride {
+			cmdline = append(cmdline, fmt.Sprintf("%s %s", constants.UkiCmdline, line))
+		}
+		return cmdline
 	}
+
 }
