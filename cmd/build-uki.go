@@ -77,7 +77,7 @@ func NewBuildUKICmd() *cobra.Command {
 	}
 
 	c.Flags().StringP("output", "o", "output.uki.iso", "Output file name")
-	c.Flags().StringP("cmdline", "c", "", "Kernel command line")
+	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.MarkFlagRequired("keys")
 	return c

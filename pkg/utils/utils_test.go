@@ -296,12 +296,18 @@ var _ = Describe("Utils", Label("utils"), func() {
 	Describe("GetUkiCmdline", Label("GetUkiCmdline"), func() {
 		It("returns the default cmdline", func() {
 			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline).To(Equal(constants.UkiCmdline))
+			Expect(cmdline[0]).To(Equal(constants.UkiCmdline))
 		})
 		It("returns the default cmdline with the cmdline flag", func() {
-			viper.Set("cmdline", "key=value testkey")
+			viper.Set("cmdline", []string{"key=value testkey"})
 			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline).To(Equal(constants.UkiCmdline + " key=value testkey"))
+			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
+		})
+		It("returns more than one cmdline with the cmdline flag if specified multiple values", func() {
+			viper.Set("cmdline", []string{"key=value testkey", "another=value anotherkey"})
+			cmdline := utils.GetUkiCmdline()
+			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
+			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " another=value anotherkey"))
 		})
 	})
 })
