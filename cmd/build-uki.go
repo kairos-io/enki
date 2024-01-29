@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"os/exec"
-
 	"github.com/kairos-io/enki/pkg/action"
 	"github.com/kairos-io/enki/pkg/config"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
@@ -36,13 +34,7 @@ func NewBuildUKICmd() *cobra.Command {
 			return CheckRoot()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := exec.LookPath("mount")
-			if err != nil {
-				return err
-			}
-			mounter := mount.New(path)
-
-			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags(), mounter)
+			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags(), &mount.FakeMounter{})
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}
