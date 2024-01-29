@@ -6,7 +6,6 @@ import (
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"k8s.io/mount-utils"
 )
 
 // NewBuildISOCmd returns a new instance of the build-iso subcommand and appends it to
@@ -34,7 +33,7 @@ func NewBuildUKICmd() *cobra.Command {
 			return CheckRoot()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags(), &mount.FakeMounter{})
+			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags())
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}

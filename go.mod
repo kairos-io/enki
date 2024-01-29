@@ -17,7 +17,6 @@ require (
 	github.com/twpayne/go-vfs v1.7.2
 	github.com/u-root/u-root v0.12.0
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
-	k8s.io/mount-utils v0.27.4
 )
 
 require (

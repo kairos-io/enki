@@ -19,10 +19,8 @@ package utils_test
 import (
 	"errors"
 	"fmt"
-	conf "github.com/kairos-io/enki/pkg/config"
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/kairos-io/enki/pkg/utils"
-	cfg "github.com/kairos-io/kairos-agent/v2/pkg/config"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	v1mock "github.com/kairos-io/kairos-agent/v2/tests/mocks"
 	. "github.com/onsi/ginkgo/v2"
@@ -35,20 +33,13 @@ import (
 )
 
 var _ = Describe("Utils", Label("utils"), func() {
-	var config *cfg.Config
 	var runner *v1mock.FakeRunner
 	var logger v1.Logger
-	var syscall *v1mock.FakeSyscall
-	var client *v1mock.FakeHTTPClient
-	var mounter *v1mock.ErrorMounter
 	var fs vfs.FS
 	var cleanup func()
 
 	BeforeEach(func() {
 		runner = v1mock.NewFakeRunner()
-		syscall = &v1mock.FakeSyscall{}
-		mounter = v1mock.NewErrorMounter()
-		client = &v1mock.FakeHTTPClient{}
 		logger = v1.NewNullLogger()
 		// Ensure /tmp exists in the VFS
 		fs, cleanup, _ = vfst.NewTestFS(nil)
@@ -56,112 +47,8 @@ var _ = Describe("Utils", Label("utils"), func() {
 		fs.Mkdir("/run", constants.DirPerm)
 		fs.Mkdir("/etc", constants.DirPerm)
 
-		config = conf.NewConfig(
-			conf.WithFs(fs),
-			conf.WithRunner(runner),
-			conf.WithLogger(logger),
-			conf.WithMounter(mounter),
-			conf.WithSyscall(syscall),
-			conf.WithClient(client),
-		)
 	})
 	AfterEach(func() { cleanup() })
-
-	Describe("Chroot", Label("chroot"), func() {
-		var chroot *utils.Chroot
-		BeforeEach(func() {
-			chroot = utils.NewChroot(
-				"/whatever",
-				config,
-			)
-		})
-		Describe("ChrootedCallback method", func() {
-			It("runs a callback in a chroot", func() {
-				err := utils.ChrootedCallback(config, "/somepath", map[string]string{}, func() error {
-					return nil
-				})
-				Expect(err).ShouldNot(HaveOccurred())
-				err = utils.ChrootedCallback(config, "/somepath", map[string]string{}, func() error {
-					return fmt.Errorf("callback error")
-				})
-				Expect(err).Should(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("callback error"))
-			})
-		})
-		Describe("on success", func() {
-			It("command should be called in the chroot", func() {
-				_, err := chroot.Run("chroot-command")
-				Expect(err).To(BeNil())
-				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
-			})
-			It("commands should be called with a customized chroot", func() {
-				chroot.SetExtraMounts(map[string]string{"/real/path": "/in/chroot/path"})
-				Expect(chroot.Prepare()).To(BeNil())
-				defer chroot.Close()
-				_, err := chroot.Run("chroot-command")
-				Expect(err).To(BeNil())
-				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
-				_, err = chroot.Run("chroot-another-command")
-				Expect(err).To(BeNil())
-			})
-			It("runs a callback in a custom chroot", func() {
-				called := false
-				callback := func() error {
-					called = true
-					return nil
-				}
-				err := chroot.RunCallback(callback)
-				Expect(err).To(BeNil())
-				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
-				Expect(called).To(BeTrue())
-			})
-		})
-		Describe("on failure", func() {
-			It("should return error if chroot-command fails", func() {
-				runner.ReturnError = errors.New("run error")
-				_, err := chroot.Run("chroot-command")
-				Expect(err).NotTo(BeNil())
-				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
-			})
-			It("should return error if callback fails", func() {
-				called := false
-				callback := func() error {
-					called = true
-					return errors.New("Callback error")
-				}
-				err := chroot.RunCallback(callback)
-				Expect(err).NotTo(BeNil())
-				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
-				Expect(called).To(BeTrue())
-			})
-			It("should return error if preparing twice before closing", func() {
-				Expect(chroot.Prepare()).To(BeNil())
-				defer chroot.Close()
-				Expect(chroot.Prepare()).NotTo(BeNil())
-				Expect(chroot.Close()).To(BeNil())
-				Expect(chroot.Prepare()).To(BeNil())
-			})
-			It("should return error if failed to chroot", func() {
-				syscall.ErrorOnChroot = true
-				_, err := chroot.Run("chroot-command")
-				Expect(err).ToNot(BeNil())
-				Expect(syscall.WasChrootCalledWith("/whatever")).To(BeTrue())
-				Expect(err.Error()).To(ContainSubstring("chroot error"))
-			})
-			It("should return error if failed to mount on prepare", Label("mount"), func() {
-				mounter.ErrorOnMount = true
-				_, err := chroot.Run("chroot-command")
-				Expect(err).ToNot(BeNil())
-				Expect(err.Error()).To(ContainSubstring("mount error"))
-			})
-			It("should return error if failed to unmount on close", Label("unmount"), func() {
-				mounter.ErrorOnUnmount = true
-				_, err := chroot.Run("chroot-command")
-				Expect(err).ToNot(BeNil())
-				Expect(err.Error()).To(ContainSubstring("failed closing chroot"))
-			})
-		})
-	})
 	Describe("CopyFile", Label("CopyFile"), func() {
 		It("Copies source file to target file", func() {
 			err := utils.MkdirAll(fs, "/some", constants.DirPerm)

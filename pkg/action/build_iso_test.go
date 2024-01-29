@@ -41,7 +41,6 @@ var _ = Describe("BuildISOAction", func() {
 	var runner *v1mock.FakeRunner
 	var fs vfs.FS
 	var logger v1.Logger
-	var mounter *v1mock.ErrorMounter
 	var syscall *v1mock.FakeSyscall
 	var client *v1mock.FakeHTTPClient
 	var cloudInit *v1mock.FakeCloudInitRunner
@@ -51,7 +50,6 @@ var _ = Describe("BuildISOAction", func() {
 	BeforeEach(func() {
 		runner = v1mock.NewFakeRunner()
 		syscall = &v1mock.FakeSyscall{}
-		mounter = v1mock.NewErrorMounter()
 		client = &v1mock.FakeHTTPClient{}
 		memLog = &bytes.Buffer{}
 		logger = v1.NewBufferLogger(memLog)
@@ -64,7 +62,6 @@ var _ = Describe("BuildISOAction", func() {
 			config.WithFs(fs),
 			config.WithRunner(runner),
 			config.WithLogger(logger),
-			config.WithMounter(mounter),
 			config.WithSyscall(syscall),
 			config.WithClient(client),
 			config.WithCloudInitRunner(cloudInit),
