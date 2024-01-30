@@ -6,7 +6,6 @@ import (
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"k8s.io/mount-utils"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,7 +21,7 @@ func NewGenkeyCmd() *cobra.Command {
 			cobraCmd.SilenceUsage = true
 			cobraCmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
-			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cobraCmd.Flags(), &mount.FakeMounter{})
+			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cobraCmd.Flags())
 			if err != nil {
 				return err
 			}

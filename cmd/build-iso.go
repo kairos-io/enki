@@ -2,15 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"os/exec"
-
 	"github.com/kairos-io/enki/pkg/action"
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/kairos-io/enki/pkg/utils"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"k8s.io/mount-utils"
 )
 
 // NewBuildISOCmd returns a new instance of the build-iso subcommand and appends it to
@@ -28,13 +25,7 @@ func NewBuildISOCmd() *cobra.Command {
 			return CheckRoot()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			path, err := exec.LookPath("mount")
-			if err != nil {
-				return err
-			}
-			mounter := mount.New(path)
-
-			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags(), mounter)
+			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cmd.Flags())
 			if err != nil {
 				cfg.Logger.Errorf("Error reading config: %s\n", err)
 			}

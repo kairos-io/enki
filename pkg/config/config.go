@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"github.com/twpayne/go-vfs"
-	"k8s.io/mount-utils"
 )
 
 var decodeHook = viper.DecodeHook(
@@ -49,13 +48,6 @@ func WithLogger(logger v1.Logger) func(r *config.Config) error {
 func WithSyscall(syscall v1.SyscallInterface) func(r *config.Config) error {
 	return func(r *config.Config) error {
 		r.Syscall = syscall
-		return nil
-	}
-}
-
-func WithMounter(mounter mount.Interface) func(r *config.Config) error {
-	return func(r *config.Config) error {
-		r.Mounter = mounter
 		return nil
 	}
 }
@@ -97,7 +89,7 @@ func WithImageExtractor(extractor v1.ImageExtractor) func(r *config.Config) erro
 
 type GenericOptions func(a *config.Config) error
 
-func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Interface) (*types.BuildConfig, error) {
+func ReadConfigBuild(configDir string, flags *pflag.FlagSet) (*types.BuildConfig, error) {
 	logger := v1.NewLogger()
 	if configDir == "" {
 		configDir = "."
@@ -108,7 +100,6 @@ func ReadConfigBuild(configDir string, flags *pflag.FlagSet, mounter mount.Inter
 	cfg := NewBuildConfig(
 		WithImageExtractor(v1.OCIImageExtractor{}),
 		WithLogger(logger),
-		WithMounter(mounter),
 	)
 
 	configLogger(cfg.Logger, cfg.Fs)
@@ -208,10 +199,6 @@ func NewConfig(opts ...GenericOptions) *config.Config {
 	// instances, on the config.Logger and the other on config.CloudInitRunner
 	if c.CloudInitRunner == nil {
 		c.CloudInitRunner = cloudinit.NewYipCloudInitRunner(c.Logger, c.Runner, vfs.OSFS)
-	}
-
-	if c.Mounter == nil {
-		c.Mounter = mount.New(constants.MountBinary)
 	}
 	litter.Config.HidePrivateFields = false
 

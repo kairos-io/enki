@@ -17,7 +17,6 @@ require (
 	github.com/twpayne/go-vfs v1.7.2
 	github.com/u-root/u-root v0.12.0
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
-	k8s.io/mount-utils v0.27.4
 )
 
 require (
@@ -156,6 +155,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/klog/v2 v2.90.1 // indirect
+	k8s.io/mount-utils v0.27.4 // indirect
 	k8s.io/utils v0.0.0-20230220204549-a5ecb0141aa5 // indirect
 	pault.ag/go/modprobe v0.1.2 // indirect
 	pault.ag/go/topsort v0.1.1 // indirect
