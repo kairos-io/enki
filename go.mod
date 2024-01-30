@@ -4,11 +4,11 @@ go 1.21
 
 require (
 	github.com/gofrs/uuid v4.4.0+incompatible
-	github.com/kairos-io/kairos-agent/v2 v2.6.2
+	github.com/kairos-io/kairos-agent/v2 v2.7.6
 	github.com/kairos-io/kairos-sdk v0.0.24-0.20240112092053-c21aa7f149cb
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/onsi/ginkgo/v2 v2.13.2
-	github.com/onsi/gomega v1.30.0
+	github.com/onsi/ginkgo/v2 v2.15.0
+	github.com/onsi/gomega v1.31.1
 	github.com/sanity-io/litter v1.5.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/cobra v1.7.0
@@ -44,7 +44,8 @@ require (
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/diskfs/go-diskfs v1.3.0 // indirect
-	github.com/distribution/distribution v2.8.2+incompatible // indirect
+	github.com/distribution/distribution v2.8.3+incompatible // indirect
+	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/cli v24.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v24.0.0+incompatible // indirect
