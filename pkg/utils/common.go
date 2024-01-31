@@ -46,9 +46,11 @@ func GolangArchToArch(arch string) (string, error) {
 func GetUkiCmdline() []string {
 	cmdlineOverride := viper.GetStringSlice("cmdline")
 	if len(cmdlineOverride) == 0 {
-		return []string{constants.UkiCmdline}
+		// For no extra cmdline, we default to install mode
+		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}
 	} else {
-		cmdline := []string{constants.UkiCmdline}
+		// For extra cmdline, we default to install mode + extra cmdlines
+		cmdline := []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}
 		for _, line := range cmdlineOverride {
 			cmdline = append(cmdline, fmt.Sprintf("%s %s", constants.UkiCmdline, line))
 		}
