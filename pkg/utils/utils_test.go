@@ -183,16 +183,20 @@ var _ = Describe("Utils", Label("utils"), func() {
 	Describe("GetUkiCmdline", Label("GetUkiCmdline"), func() {
 		It("returns the default cmdline", func() {
 			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline[0]).To(Equal(constants.UkiCmdline))
+			Expect(cmdline[0]).To(Equal(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
 		})
-		It("returns the default cmdline with the cmdline flag", func() {
+		It("returns the default cmdline with the cmdline flag and install-mode", func() {
 			viper.Set("cmdline", []string{"key=value testkey"})
 			cmdline := utils.GetUkiCmdline()
+			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
 		})
 		It("returns more than one cmdline with the cmdline flag if specified multiple values", func() {
 			viper.Set("cmdline", []string{"key=value testkey", "another=value anotherkey"})
 			cmdline := utils.GetUkiCmdline()
+			// Should contain the default one
+			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
+			// Also the extra ones, without the install-mode
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " another=value anotherkey"))
 		})
