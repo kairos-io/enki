@@ -5,7 +5,7 @@ import (
 )
 
 var (
-	version = "v0.0.1"
+	VERSION = "v0.0.1"
 	// gitCommit is the git sha1
 	gitCommit = ""
 )
@@ -21,7 +21,7 @@ type BuildInfo struct {
 }
 
 func GetVersion() string {
-	return version
+	return VERSION
 }
 
 // Get returns build info
