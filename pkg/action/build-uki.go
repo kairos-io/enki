@@ -116,7 +116,7 @@ func (b *BuildUKIAction) Run() error {
 		//Then remove the output dir files as we dont need them, the container has been loaded
 		// TODO: Fix this. We should just no remove bindly the output dir, but only the files we created
 		// Otherwise if the output dir is / we fucked up the whole system LMAO
-		err = RemoveContents(b.outputDir)
+		err = b.removeUkiFiles()
 		if err != nil {
 			return err
 		}
@@ -601,6 +601,27 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	return data, nil
 }
 
+// removeUkiFiles removes all the files and directories inside the output directory that match our filesMap
+// so this should only remove the generated intermediate artifacts that we use to build the container
+func (b *BuildUKIAction) removeUkiFiles() error {
+	filesMap, _ := b.imageFiles(b.outputDir)
+	for dir, files := range filesMap {
+		for _, f := range files {
+			err := os.Remove(filepath.Join(b.outputDir, dir, filepath.Base(f)))
+			if err != nil {
+				return err
+			}
+		}
+	}
+	for dir, _ := range filesMap {
+		err := os.RemoveAll(filepath.Join(b.outputDir, dir))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
 	for dir, files := range filesMap {
 		for _, f := range files {
@@ -737,24 +758,4 @@ func nameFromCmdline(version, cmdline string) string {
 	// If the cmdline is empty, we remove the underscore as to not get a dangling one
 	finalName := strings.TrimSuffix(name, "_")
 	return finalName
-}
-
-// RemoveContents removes all the files and directories inside a directory
-func RemoveContents(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
