@@ -10,7 +10,7 @@ type UkiOutput string
 
 const IsoOutput UkiOutput = "iso"
 const ContainerOutput UkiOutput = "container"
-const DefaultOutput UkiOutput = "artifact"
+const DefaultOutput UkiOutput = "uki"
 
 func OutPutTypes() []string {
 	return []string{string(IsoOutput), string(ContainerOutput), string(DefaultOutput)}
