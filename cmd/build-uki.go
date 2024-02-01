@@ -1,11 +1,14 @@
 package cmd
 
 import (
+	"fmt"
 	"github.com/kairos-io/enki/pkg/action"
 	"github.com/kairos-io/enki/pkg/config"
+	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"strings"
 )
 
 // NewBuildISOCmd returns a new instance of the build-iso subcommand and appends it to
@@ -30,6 +33,14 @@ func NewBuildUKICmd() *cobra.Command {
 			"    - tpm2-pcr-private.pem\n",
 		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
+			artifact, err := cmd.Flags().GetString("output-type")
+			if err != nil {
+				return err
+			}
+			if artifact != string(constants.DefaultOutput) && artifact != string(constants.IsoOutput) && artifact != string(constants.ContainerOutput) {
+				return fmt.Errorf("invalid output type: %s", artifact)
+			}
+
 			return CheckRoot()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -54,9 +65,10 @@ func NewBuildUKICmd() *cobra.Command {
 			}
 
 			flags := cmd.Flags()
-			outputFile, _ := flags.GetString("output")
+			outputDir, _ := flags.GetString("output-dir")
 			keysDir, _ := flags.GetString("keys")
-			a := action.NewBuildUKIAction(cfg, imgSource, outputFile, keysDir)
+			outputType, _ := flags.GetString("output-type")
+			a := action.NewBuildUKIAction(cfg, imgSource, outputDir, keysDir, outputType)
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
@@ -67,7 +79,8 @@ func NewBuildUKICmd() *cobra.Command {
 		},
 	}
 
-	c.Flags().StringP("output", "o", "output.uki.iso", "Output file name")
+	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
+	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.MarkFlagRequired("keys")

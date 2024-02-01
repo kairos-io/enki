@@ -1,10 +1,18 @@
 package utils
 
 import (
+	"archive/tar"
+	"bytes"
 	"fmt"
+	container "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/viper"
+	"io"
+	"os"
+	"path"
+	"path/filepath"
 	"strings"
 )
 
@@ -57,4 +65,57 @@ func GetUkiCmdline() []string {
 		return cmdline
 	}
 
+}
+
+// LayerFromDir Converts a directory to a container layer by tarballing it
+func LayerFromDir(root string) (container.Layer, error) {
+	var b bytes.Buffer
+	tw := tar.NewWriter(&b)
+
+	err := filepath.Walk(root, func(fp string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		rel, err := filepath.Rel(root, fp)
+		if err != nil {
+			return fmt.Errorf("failed to calculate relative path: %w", err)
+		}
+
+		hdr := &tar.Header{
+			Name: path.Join("/", filepath.ToSlash(rel)),
+			Mode: int64(info.Mode()),
+		}
+
+		if !info.IsDir() {
+			hdr.Size = info.Size()
+		}
+
+		if info.Mode().IsDir() {
+			hdr.Typeflag = tar.TypeDir
+		} else {
+			hdr.Typeflag = tar.TypeReg
+		}
+
+		if err := tw.WriteHeader(hdr); err != nil {
+			return fmt.Errorf("failed to write tar header: %w", err)
+		}
+		if !info.IsDir() {
+			f, err := os.Open(fp)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(tw, f); err != nil {
+				return fmt.Errorf("failed to read file into the tar: %w", err)
+			}
+			f.Close()
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to scan files: %w", err)
+	}
+	if err := tw.Close(); err != nil {
+		return nil, fmt.Errorf("failed to finish tar: %w", err)
+	}
+	return tarball.LayerFromReader(&b)
 }

@@ -13,7 +13,7 @@ go-deps:
     FROM golang:$GO_VERSION
     RUN apt-get update && apt-get install -y rsync gcc bash git jq docker
     WORKDIR /build
-    COPY go.mod go.sum ./
+    COPY go.mod go.sum . # This will make the go mod download able to be cached as long as it hasnt change
     RUN go mod download
     SAVE ARTIFACT go.mod AS LOCAL go.mod
     SAVE ARTIFACT go.sum AS LOCAL go.sum
