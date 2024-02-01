@@ -100,7 +100,10 @@ func (b *BuildUKIAction) Run() error {
 			return err
 		}
 		// Then build the image
-		kairosVersion, _ := findKairosVersion(sourceDir)
+		kairosVersion, err := findKairosVersion(sourceDir)
+		if err != nil {
+			return err
+		}
 		err = b.createContainer(b.outputDir, kairosVersion)
 		if err != nil {
 			return err
