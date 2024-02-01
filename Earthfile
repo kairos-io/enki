@@ -12,8 +12,9 @@ test:
     FROM golang:$GO_VERSION
     RUN apk add rsync gcc musl-dev docker jq
     WORKDIR /build
-    COPY . .
+    COPY go.mod go.sum . # This will make the go mod download able to be cached as long as it hasnt change
     RUN go mod download
+    COPY . .
     ARG TEST_PATHS=./...
     ARG LABEL_FILTER=
     ENV CGO_ENABLED=1
