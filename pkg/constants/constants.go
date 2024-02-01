@@ -6,6 +6,16 @@ import (
 	"path/filepath"
 )
 
+type UkiOutput string
+
+const IsoOutput UkiOutput = "iso"
+const ContainerOutput UkiOutput = "container"
+const DefaultOutput UkiOutput = "artifact"
+
+func OutPutTypes() []string {
+	return []string{string(IsoOutput), string(ContainerOutput), string(DefaultOutput)}
+}
+
 const (
 	GrubDefEntry   = "Kairos"
 	EfiLabel       = "COS_GRUB"

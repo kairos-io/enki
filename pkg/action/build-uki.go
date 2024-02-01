@@ -3,6 +3,10 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/kairos-io/enki/pkg/constants"
 	"io"
 	"math"
@@ -26,18 +30,20 @@ import (
 type BuildUKIAction struct {
 	img           *v1.ImageSource
 	e             *elemental.Elemental
-	isoFile       string
+	outputDir     string
 	keysDirectory string
 	logger        v1.Logger
+	artifact      string
 }
 
-func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, result, keysDirectory string) *BuildUKIAction {
+func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, artifact string) *BuildUKIAction {
 	b := &BuildUKIAction{
 		logger:        cfg.Logger,
 		img:           img,
 		e:             elemental.NewElemental(&cfg.Config),
-		isoFile:       result,
+		outputDir:     outputDir,
 		keysDirectory: keysDirectory,
+		artifact:      artifact,
 	}
 	b.logger.Debugf("BuildUKIAction: %+v", litter.Sdump(b))
 	return b
@@ -49,47 +55,72 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
-	b.logger.Info("extracting image to a temporary directory")
+	b.logger.Info("Extracting image to a temporary directory")
 	sourceDir, err := b.extractImage()
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(sourceDir)
 
-	b.logger.Info("creating additional directories")
+	b.logger.Info("Creating additional directories in the rootfs")
 	if err := b.setupDirectoriesAndFiles(sourceDir); err != nil {
 		return err
 	}
 
-	b.logger.Info("creating an initramfs file")
+	b.logger.Info("Creating an initramfs file")
 	if err := b.createInitramfs(sourceDir); err != nil {
 		return err
 	}
 
 	cmdlines := utils.GetUkiCmdline()
 	for _, cmdline := range cmdlines {
-		b.logger.Info("running ukify for cmdline: " + cmdline)
+		b.logger.Info("Running ukify for cmdline: " + cmdline)
 		if err := b.ukify(sourceDir, cmdline); err != nil {
 			return err
 		}
-		b.logger.Info("creating kairos and loader conf files")
+		b.logger.Info("Creating kairos and loader conf files")
 		if err := b.createConfFiles(sourceDir, cmdline); err != nil {
 			return err
 		}
 	}
 
-	b.logger.Info("running sbsign")
+	b.logger.Info("Signing artifacts")
 	if err := b.sbSign(sourceDir); err != nil {
 		return err
 	}
 
-	if err := b.createISO(sourceDir); err != nil {
-		return err
+	switch b.artifact {
+	case string(constants.IsoOutput):
+		err = b.createISO(sourceDir)
+		b.logger.Infof("Done building %s at: %s", b.artifact, b.outputDir)
+	case string(constants.ContainerOutput):
+		// First create the files
+		err = b.createArtifact(sourceDir)
+		if err != nil {
+			return err
+		}
+		// Then build the image
+		kairosVersion, _ := findKairosVersion(sourceDir)
+		err = b.createContainer(b.outputDir, kairosVersion)
+		if err != nil {
+			return err
+		}
+		//Then remove the output dir files as we dont need them, the container has been loaded
+		// TODO: Fix this. We should just no remove bindly the output dir, but only the files we created
+		// Otherwise if the output dir is / we fucked up the whole system LMAO
+		err = RemoveContents(b.outputDir)
+		if err != nil {
+			return err
+		}
+	case string(constants.DefaultOutput):
+		err = b.createArtifact(sourceDir)
+		if err != nil {
+			return err
+		}
+		b.logger.Infof("Done building %s at: %s", b.artifact, b.outputDir)
 	}
 
-	b.logger.Info(fmt.Sprintf("Done building the iso file: %s", b.isoFile))
-
-	return nil
+	return err
 }
 
 func (b *BuildUKIAction) extractImage() (string, error) {
@@ -417,7 +448,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		return err
 	}
 
-	b.logger.Info("calculating the size of the img file")
+	b.logger.Info("Calculating the size of the img file")
 	artifactSize, err := sumFileSizes(filesMap)
 	if err != nil {
 		return err
@@ -426,32 +457,122 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	// Create just the size we need + 50MB just in case
 	imgSize := artifactSize + 50
 	imgFile := filepath.Join(isoDir, "efiboot.img")
-	b.logger.Info(fmt.Sprintf("creating the img file with size: %dMb", imgSize))
+	b.logger.Info(fmt.Sprintf("Creating the img file with size: %dMb", imgSize))
 	if err = createImgWithSize(imgFile, imgSize); err != nil {
 		return err
 	}
 	defer os.Remove(imgFile)
 
-	b.logger.Info(fmt.Sprintf("created image: %s", imgFile))
+	b.logger.Info(fmt.Sprintf("Created image: %s", imgFile))
 
-	b.logger.Info("creating directories in the img file")
+	b.logger.Info("Creating directories in the img file")
 	if err := createImgDirs(imgFile, filesMap); err != nil {
 		return err
 	}
 
-	b.logger.Info("copying files in the img file")
+	b.logger.Info("Copying files in the img file")
 	if err := copyFilesToImg(imgFile, filesMap); err != nil {
 		return err
 	}
 
-	b.logger.Info("creating the iso files with xorriso")
+	kairosVersion, err := findKairosVersion(sourceDir)
+	if err != nil {
+		kairosVersion = "unknown"
+	}
+	isoName := fmt.Sprintf("kairos_%s.iso", kairosVersion)
+
+	b.logger.Info("Creating the iso files with xorriso")
 	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
-		"-e", filepath.Base(imgFile), "-no-emul-boot", "-o", b.isoFile, isoDir)
+		"-e", filepath.Base(imgFile), "-no-emul-boot", "-o", filepath.Join(b.outputDir, isoName), isoDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("error creating iso file: %w\n%s", err, string(out))
 	}
 
+	return nil
+}
+
+func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
+	// Basically?
+	// FROM scratch
+	// ADD sourceDir /
+
+	b.logger.Infof("Creating container from dir %s", sourceDir)
+	addLayer, err := utils.LayerFromDir(sourceDir)
+	if err != nil {
+		b.logger.Errorf("error creating layer: %s", err)
+		return err
+	}
+	b.logger.Debugf("Appending layer to image")
+	newImg, err := mutate.AppendLayers(empty.Image, addLayer)
+	if err != nil {
+		b.logger.Errorf("error appending layer: %s", err)
+		return err
+	}
+	b.logger.Debugf("Tagging image")
+	tag, err := name.NewTag(fmt.Sprintf("kairos_uki:%s", version))
+	b.logger.Debugf("Tag: " + tag.String())
+	if err != nil {
+		b.logger.Errorf("error creating tag: %s", err)
+		return err
+	}
+	b.logger.Debugf("Writing image")
+	if s, err := daemon.Write(tag, newImg); err != nil {
+		b.logger.Errorf("error writing image: %s", err)
+		return err
+	} else {
+		b.logger.Debugf("created image: " + s)
+	}
+	b.logger.Infof("Done building %s at: %s", b.artifact, tag.String())
+	return err
+}
+
+// Create artifact just outputs the files from the sourceDir to the outputDir
+// Maintains the same structure as the sourceDir which is the final structure we want
+func (b *BuildUKIAction) createArtifact(sourceDir string) error {
+	filesMap, err := b.imageFiles(sourceDir)
+	if err != nil {
+		return err
+	}
+	for dir, files := range filesMap {
+		b.logger.Debugf(fmt.Sprintf("creating dir %s", filepath.Join(b.outputDir, dir)))
+		err = os.MkdirAll(filepath.Join(b.outputDir, dir), os.ModeDir|os.ModePerm)
+		if err != nil {
+			b.logger.Errorf("creating dir %s: %s", dir, err)
+			return err
+		}
+		for _, f := range files {
+			b.logger.Debugf(fmt.Sprintf("copying %s to %s", f, filepath.Join(b.outputDir, dir, filepath.Base(f))))
+			source, err := os.Open(f)
+			if err != nil {
+				b.logger.Errorf("opening file %s: %s", f, err)
+				return err
+			}
+			defer func(source *os.File) {
+				err := source.Close()
+				if err != nil {
+					b.logger.Errorf("closing file %s: %s", f, err)
+				}
+			}(source)
+
+			destination, err := os.Create(filepath.Join(b.outputDir, dir, filepath.Base(f)))
+			if err != nil {
+				b.logger.Errorf("creating file %s: %s", filepath.Join(b.outputDir, dir, filepath.Base(f)), err)
+				return err
+			}
+			defer func(destination *os.File) {
+				err := destination.Close()
+				if err != nil {
+					b.logger.Errorf("closing file %s: %s", filepath.Join(b.outputDir, dir, filepath.Base(f)), err)
+				}
+			}(destination)
+			_, err = io.Copy(destination, source)
+			if err != nil {
+				b.logger.Errorf("copying file %s: %s", f, err)
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -464,14 +585,14 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	// the keys are the target dirs
 	// the values are the source files that should be copied into the target dir
 	data := map[string][]string{
-		"::EFI":            {},
-		"::EFI/BOOT":       {filepath.Join(sourceDir, "BOOTX64.EFI")},
-		"::EFI/kairos":     {},
-		"::EFI/tools":      {},
-		"::loader":         {filepath.Join(sourceDir, "loader.conf")},
-		"::loader/entries": {},
-		"::loader/keys":    {},
-		"::loader/keys/auto": {
+		"EFI":            {},
+		"EFI/BOOT":       {filepath.Join(sourceDir, "BOOTX64.EFI")},
+		"EFI/kairos":     {},
+		"EFI/tools":      {},
+		"loader":         {filepath.Join(sourceDir, "loader.conf")},
+		"loader/entries": {},
+		"loader/keys":    {},
+		"loader/keys/auto": {
 			filepath.Join(b.keysDirectory, "PK.der"),
 			filepath.Join(b.keysDirectory, "KEK.der"),
 			filepath.Join(b.keysDirectory, "DB.der"),
@@ -483,17 +604,17 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	cmdlines := utils.GetUkiCmdline()
 	for _, cmdline := range cmdlines {
 		finalEfiName := nameFromCmdline(kairosVersion, cmdline)
-		data["::EFI/kairos"] = append(data["::EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
-		data["::loader/entries"] = append(data["::loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
+		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
+		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
 	}
-	b.logger.Info(fmt.Sprintf("data: %s", litter.Sdump(data)))
+	b.logger.Debug(fmt.Sprintf("data: %s", litter.Sdump(data)))
 	return data, nil
 }
 
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
 	for dir, files := range filesMap {
 		for _, f := range files {
-			cmd := exec.Command("mcopy", "-i", imgFile, f, filepath.Join(dir, filepath.Base(f)))
+			cmd := exec.Command("mcopy", "-i", imgFile, f, filepath.Join(fmt.Sprintf("::%s", dir), filepath.Base(f)))
 			out, err := cmd.CombinedOutput()
 			if err != nil {
 				return fmt.Errorf("copying %s in img file: %w\n%s", f, err, string(out))
@@ -584,7 +705,8 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 	dirs := maps.Keys(filesMap)
 	sort.Strings(dirs) // Make sure we create outer dirs first
 	for _, dir := range dirs {
-		cmd := exec.Command("mmd", "-i", imgFile, dir)
+		// Dirs in MSDOS are marked with ::DIR
+		cmd := exec.Command("mmd", "-i", imgFile, fmt.Sprintf("::%s", dir))
 		out, err := cmd.CombinedOutput()
 		if err != nil {
 			return fmt.Errorf("creating directory %s on the img file: %w\n%s\nThe failed command was: %s", dir, err, string(out), cmd.String())
@@ -625,4 +747,24 @@ func nameFromCmdline(version, cmdline string) string {
 	// If the cmdline is empty, we remove the underscore as to not get a dangling one
 	finalName := strings.TrimSuffix(name, "_")
 	return finalName
+}
+
+// RemoveContents removes all the files and directories inside a directory
+func RemoveContents(dir string) error {
+	d, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer d.Close()
+	names, err := d.Readdirnames(-1)
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		err = os.RemoveAll(filepath.Join(dir, name))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
