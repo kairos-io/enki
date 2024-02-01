@@ -34,6 +34,7 @@ type BuildUKIAction struct {
 	keysDirectory string
 	logger        v1.Logger
 	outputType    string
+	version       string
 }
 
 func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, outputType string) *BuildUKIAction {
@@ -61,6 +62,13 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 	defer os.RemoveAll(sourceDir)
+
+	// Store the version so we only need to check it once
+	kairosVersion, err := findKairosVersion(sourceDir)
+	if err != nil {
+		return err
+	}
+	b.version = kairosVersion
 
 	b.logger.Info("Creating additional directories in the rootfs")
 	if err := b.setupDirectoriesAndFiles(sourceDir); err != nil {
@@ -100,10 +108,7 @@ func (b *BuildUKIAction) Run() error {
 			return err
 		}
 		// Then build the image
-		kairosVersion, err := findKairosVersion(sourceDir)
-		if err != nil {
-			return err
-		}
+
 		err = b.createContainer(b.outputDir, kairosVersion)
 		if err != nil {
 			return err
@@ -343,11 +348,6 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 		return err
 	}
 
-	kairosVersion, err := findKairosVersion(sourceDir)
-	if err != nil {
-		return err
-	}
-
 	// name: kairosVersion + cmdline + .efi
 	// for the cmdline, we remove the shared cmdline values and only keep the extra values added by the user
 	// we also replace spaces with underscores
@@ -356,7 +356,7 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	if cmdlineName == constants.UkiCmdlineInstall {
 		cmdlineName = ""
 	}
-	finalEfiName := strings.TrimSuffix(kairosVersion+"_"+strings.Replace(cmdlineName, " ", "_", -1), "_") + ".efi"
+	finalEfiName := strings.TrimSuffix(b.version+"_"+strings.Replace(cmdlineName, " ", "_", -1), "_") + ".efi"
 	b.logger.Infof("Generating: " + finalEfiName)
 	cmd := exec.Command("/usr/lib/systemd/ukify",
 		"--linux", "vmlinuz",
@@ -402,11 +402,7 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	var cmdlineForConf string
 	// This is stored in the config
 	var extraCmdline string
-	kairosVersion, err := findKairosVersion(sourceDir)
-	if err != nil {
-		return err
-	}
-	finalEfiName := nameFromCmdline(kairosVersion, cmdline)
+	finalEfiName := nameFromCmdline(b.version, cmdline)
 	// For the config title we get only the extra cmdline we added, no replacement of spaces with underscores needed
 	extraCmdline = strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
 	// For the default install entry, do not add anything on the config
@@ -423,8 +419,8 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
-	data := fmt.Sprintf("title Kairos %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", kairosVersion, cmdlineForConf, finalEfiName, kairosVersion, strings.Trim(cmdline, " "))
-	err = os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
+	data := fmt.Sprintf("title Kairos %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", b.version, cmdlineForConf, finalEfiName, b.version, strings.Trim(cmdline, " "))
+	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
 	}
@@ -478,11 +474,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		return err
 	}
 
-	kairosVersion, err := findKairosVersion(sourceDir)
-	if err != nil {
-		kairosVersion = "unknown"
-	}
-	isoName := fmt.Sprintf("kairos_%s.iso", kairosVersion)
+	isoName := fmt.Sprintf("kairos_%s.iso", b.version)
 
 	b.logger.Info("Creating the iso files with xorriso")
 	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
@@ -580,11 +572,6 @@ func (b *BuildUKIAction) createArtifact(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, error) {
-	kairosVersion, err := findKairosVersion(sourceDir)
-	if err != nil {
-		return map[string][]string{}, err
-	}
-
 	// the keys are the target dirs
 	// the values are the source files that should be copied into the target dir
 	data := map[string][]string{
@@ -606,7 +593,7 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	// Add the kairos efi files and the loader conf files for each cmdline
 	cmdlines := utils.GetUkiCmdline()
 	for _, cmdline := range cmdlines {
-		finalEfiName := nameFromCmdline(kairosVersion, cmdline)
+		finalEfiName := nameFromCmdline(b.version, cmdline)
 		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
 		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
 	}
