@@ -15,6 +15,22 @@ go-deps:
     WORKDIR /build
     COPY go.mod go.sum . # This will make the go mod download able to be cached as long as it hasnt change
     RUN go mod download
+    SAVE ARTIFACT go.mod AS LOCAL go.mod
+    SAVE ARTIFACT go.sum AS LOCAL go.sum
+
+version:
+    FROM +go-deps
+    COPY . ./
+    RUN --no-cache echo $(git describe --always --tags --dirty) > VERSION
+    RUN --no-cache echo $(git describe --always --dirty) > COMMIT
+    ARG VERSION=$(cat VERSION)
+    ARG COMMIT=$(cat COMMIT)
+    SAVE ARTIFACT VERSION VERSION
+    SAVE ARTIFACT COMMIT COMMIT
+
+test:
+    FROM +go-deps
+    WORKDIR /build
     COPY . .
     ARG TEST_PATHS=./...
     ARG LABEL_FILTER=
