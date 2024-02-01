@@ -13,7 +13,7 @@ ENV ENKI_VERSION=${ENKI_VERSION}
 ENV ENKI_COMMIT=${ENKI_COMMIT}
 RUN go build \
     -ldflags "-w -s \
-    -X github.com/kairos-io/enki/internal/version.version=$ENKI_VERSION \
+    -X github.com/kairos-io/enki/internal/version.VERSION=$ENKI_VERSION \
     -X github.com/kairos-io/enki/internal/version.gitCommit=$ENKI_COMMIT" \
     -o /enki
 

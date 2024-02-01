@@ -1,19 +1,37 @@
 VERSION 0.7
 
 # renovate: datasource=docker depName=golang
-ARG --global GO_VERSION=1.21-alpine3.18
+ARG --global GO_VERSION=1.20-bookworm
 
 enki-image:
     FROM DOCKERFILE -f e2e/assets/Dockerfile.enki e2e/assets/
 
     SAVE IMAGE enki-image
 
-test:
+go-deps:
+    ARG GO_VERSION
     FROM golang:$GO_VERSION
-    RUN apk add rsync gcc musl-dev docker jq
+    RUN apt-get update && apt-get install -y rsync gcc bash git jq docker
+    WORKDIR /build
+    COPY go.mod go.sum ./
+    RUN go mod download
+    SAVE ARTIFACT go.mod AS LOCAL go.mod
+    SAVE ARTIFACT go.sum AS LOCAL go.sum
+
+version:
+    FROM +go-deps
+    COPY . ./
+    RUN --no-cache echo $(git describe --always --tags --dirty) > VERSION
+    RUN --no-cache echo $(git describe --always --dirty) > COMMIT
+    ARG VERSION=$(cat VERSION)
+    ARG COMMIT=$(cat COMMIT)
+    SAVE ARTIFACT VERSION VERSION
+    SAVE ARTIFACT COMMIT COMMIT
+
+test:
+    FROM +go-deps
     WORKDIR /build
     COPY . .
-    RUN go mod download
     ARG TEST_PATHS=./...
     ARG LABEL_FILTER=
     ENV CGO_ENABLED=1
@@ -22,3 +40,16 @@ test:
         RUN go run github.com/onsi/ginkgo/v2/ginkgo run --label-filter "$LABEL_FILTER" -v --fail-fast --race --covermode=atomic --coverprofile=coverage.out --coverpkg=github.com/kairos-io/enki/... -p -r $TEST_PATHS
     END
     SAVE ARTIFACT coverage.out AS LOCAL coverage.out
+
+build:
+    FROM +go-deps
+    COPY . .
+    COPY +version/VERSION ./
+    COPY +version/COMMIT ./
+    ARG VERSION=$(cat VERSION)
+    ARG COMMIT=$(cat COMMIT)
+    RUN --no-cache echo "Building Version: ${VERSION} and Commit: ${COMMIT}"
+    ARG LDFLAGS="-s -w -X github.com/kairos-io/enki/internal/version.VERSION=${VERSION} -X github.com/kairos-io/enki/internal/version.gitCommit=$COMMIT"
+    ENV CGO_ENABLED=0
+    RUN go build -o enki -ldflags "${LDFLAGS}" main.go
+    SAVE ARTIFACT enki enki AS LOCAL build/enki
