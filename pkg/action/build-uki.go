@@ -33,17 +33,17 @@ type BuildUKIAction struct {
 	outputDir     string
 	keysDirectory string
 	logger        v1.Logger
-	artifact      string
+	outputType    string
 }
 
-func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, artifact string) *BuildUKIAction {
+func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, outputType string) *BuildUKIAction {
 	b := &BuildUKIAction{
 		logger:        cfg.Logger,
 		img:           img,
 		e:             elemental.NewElemental(&cfg.Config),
 		outputDir:     outputDir,
 		keysDirectory: keysDirectory,
-		artifact:      artifact,
+		outputType:    outputType,
 	}
 	b.logger.Debugf("BuildUKIAction: %+v", litter.Sdump(b))
 	return b
@@ -89,10 +89,10 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
-	switch b.artifact {
+	switch b.outputType {
 	case string(constants.IsoOutput):
 		err = b.createISO(sourceDir)
-		b.logger.Infof("Done building %s at: %s", b.artifact, b.outputDir)
+		b.logger.Infof("Done building %s at: %s", b.outputType, b.outputDir)
 	case string(constants.ContainerOutput):
 		// First create the files
 		err = b.createArtifact(sourceDir)
@@ -117,7 +117,7 @@ func (b *BuildUKIAction) Run() error {
 		if err != nil {
 			return err
 		}
-		b.logger.Infof("Done building %s at: %s", b.artifact, b.outputDir)
+		b.logger.Infof("Done building %s at: %s", b.outputType, b.outputDir)
 	}
 
 	return err
@@ -523,7 +523,7 @@ func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
 	} else {
 		b.logger.Debugf("created image: " + s)
 	}
-	b.logger.Infof("Done building %s at: %s", b.artifact, tag.String())
+	b.logger.Infof("Done building %s at: %s", b.outputType, tag.String())
 	return err
 }
 

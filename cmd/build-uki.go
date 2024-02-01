@@ -33,12 +33,12 @@ func NewBuildUKICmd() *cobra.Command {
 			"    - tpm2-pcr-private.pem\n",
 		Args: cobra.ExactArgs(1),
 		PreRunE: func(cmd *cobra.Command, args []string) error {
-			artifact, err := cmd.Flags().GetString("artifact")
+			artifact, err := cmd.Flags().GetString("output-type")
 			if err != nil {
 				return err
 			}
 			if artifact != string(constants.DefaultOutput) && artifact != string(constants.IsoOutput) && artifact != string(constants.ContainerOutput) {
-				return fmt.Errorf("invalid artifact type: %s", artifact)
+				return fmt.Errorf("invalid output type: %s", artifact)
 			}
 
 			return CheckRoot()
@@ -65,10 +65,10 @@ func NewBuildUKICmd() *cobra.Command {
 			}
 
 			flags := cmd.Flags()
-			outputDir, _ := flags.GetString("output")
+			outputDir, _ := flags.GetString("output-dir")
 			keysDir, _ := flags.GetString("keys")
-			artifact, _ := flags.GetString("artifact")
-			a := action.NewBuildUKIAction(cfg, imgSource, outputDir, keysDir, artifact)
+			outputType, _ := flags.GetString("output-type")
+			a := action.NewBuildUKIAction(cfg, imgSource, outputDir, keysDir, outputType)
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
@@ -79,11 +79,11 @@ func NewBuildUKICmd() *cobra.Command {
 		},
 	}
 
-	c.Flags().StringP("output", "o", ".", "Output dir for artifact")
+	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
+	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.MarkFlagRequired("keys")
-	c.Flags().StringP("artifact", "a", string(constants.DefaultOutput), fmt.Sprintf("Artifact type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	return c
 }
 
