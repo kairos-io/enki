@@ -4,8 +4,9 @@ go 1.21
 
 require (
 	github.com/gofrs/uuid v4.4.0+incompatible
+	github.com/google/go-containerregistry v0.17.0
 	github.com/kairos-io/kairos-agent/v2 v2.7.6
-	github.com/kairos-io/kairos-sdk v0.0.24-0.20240112092053-c21aa7f149cb
+	github.com/kairos-io/kairos-sdk v0.0.24
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.15.0
 	github.com/onsi/gomega v1.31.1
@@ -66,7 +67,6 @@ require (
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/google/go-containerregistry v0.17.0 // indirect
 	github.com/google/pprof v0.0.0-20230228050547-1710fef4ab10 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/google/uuid v1.3.0 // indirect
