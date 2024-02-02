@@ -19,7 +19,7 @@ RUN go build \
 
 FROM fedora as tools-image
 
-RUN dnf install -y binutils systemd-boot mtools efitools sbsigntools shim openssl systemd-ukify dosfstools xorriso
+RUN dnf install -y binutils systemd-boot mtools efitools sbsigntools shim openssl systemd-ukify dosfstools xorriso rsync
 
 COPY --from=builder /enki /enki
 
