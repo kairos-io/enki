@@ -92,6 +92,11 @@ func (b *BuildUKIAction) Run() error {
 		}
 	}
 
+	err = b.createSystemdConf(sourceDir)
+	if err != nil {
+		return err
+	}
+
 	b.logger.Info("Signing artifacts")
 	if err := b.sbSign(sourceDir); err != nil {
 		return err
@@ -129,6 +134,20 @@ func (b *BuildUKIAction) Run() error {
 	}
 
 	return err
+}
+
+// createSystemdConf creates the generic conf that systemd-boot uses
+func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
+	// Get the generic efi file that we produce from the default cmdline
+	// This is the one name that has nothing added, just the version
+	finalEfiConf := nameFromCmdline(b.version, constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
+	// Set that as default selection for booting
+	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\n", finalEfiConf)
+	err := os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("creating the loader.conf file: %s", err)
+	}
+	return nil
 }
 
 func (b *BuildUKIAction) extractImage() (string, error) {
@@ -423,12 +442,6 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
-	}
-
-	data = "default @saved\ntimeout 5\nconsole-mode max\neditor no\n"
-	err = os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
-	if err != nil {
-		return fmt.Errorf("creating the loader.conf file")
 	}
 
 	return nil
