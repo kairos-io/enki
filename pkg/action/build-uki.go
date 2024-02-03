@@ -142,11 +142,16 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 	var finalEfiConf string
 	entry := viper.GetString("default-entry")
 	if entry != "" {
-		finalEfiConf = entry
+		if !strings.HasSuffix(entry, ".conf") {
+			finalEfiConf = strings.TrimSuffix(entry, " ") + ".conf"
+		} else {
+			finalEfiConf = entry
+		}
+
 	} else {
 		// Get the generic efi file that we produce from the default cmdline
 		// This is the one name that has nothing added, just the version
-		finalEfiConf = nameFromCmdline(b.version, constants.UkiCmdline+" "+constants.UkiCmdlineInstall)
+		finalEfiConf = nameFromCmdline(b.version, constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
 	}
 	// Set that as default selection for booting
 	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\n", finalEfiConf)
