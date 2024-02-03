@@ -8,6 +8,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/spf13/viper"
 	"io"
 	"math"
 	"os"
@@ -138,9 +139,15 @@ func (b *BuildUKIAction) Run() error {
 
 // createSystemdConf creates the generic conf that systemd-boot uses
 func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
-	// Get the generic efi file that we produce from the default cmdline
-	// This is the one name that has nothing added, just the version
-	finalEfiConf := nameFromCmdline(b.version, constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
+	var finalEfiConf string
+	entry := viper.GetString("default-entry")
+	if entry != "" {
+		finalEfiConf = entry
+	} else {
+		// Get the generic efi file that we produce from the default cmdline
+		// This is the one name that has nothing added, just the version
+		finalEfiConf = nameFromCmdline(b.version, constants.UkiCmdline+" "+constants.UkiCmdlineInstall)
+	}
 	// Set that as default selection for booting
 	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\n", finalEfiConf)
 	err := os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)

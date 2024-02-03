@@ -83,6 +83,7 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
+	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
 	c.MarkFlagRequired("keys")
 	return c
 }
