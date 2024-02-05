@@ -3,10 +3,6 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
-	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/spf13/viper"
 	"io"
@@ -120,8 +116,6 @@ func (b *BuildUKIAction) Run() error {
 			return err
 		}
 		//Then remove the output dir files as we dont need them, the container has been loaded
-		// TODO: Fix this. We should just no remove bindly the output dir, but only the files we created
-		// Otherwise if the output dir is / we fucked up the whole system LMAO
 		err = b.removeUkiFiles()
 		if err != nil {
 			return err
@@ -513,37 +507,58 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
-	// Basically?
-	// FROM scratch
-	// ADD sourceDir /
+	temp, err := os.CreateTemp("", "image.tar")
+	if err != nil {
+		return err
+	}
+	// Create tarball from sourceDir
+	err = utils.Tar(sourceDir, temp)
+	if err != nil {
+		return err
+	}
+	_ = temp.Close()
+	defer os.RemoveAll(temp.Name())
+	finalImage := filepath.Join(b.outputDir, fmt.Sprintf("kairos_uki_%s.tar", version))
+	// TODO: get the arch from the running system or by flag? Config.Arch has this value on it
+	arch := "amd64"
+	os := "linux"
+	// Build imageTar from normal tar
+	err = utils.CreateTar(b.logger, temp.Name(), finalImage, fmt.Sprintf("kairos_uki:%s", version), arch, os)
+	if err != nil {
+		return err
+	}
+	b.logger.Infof("Done building %s at: %s", b.outputType, finalImage)
 
-	b.logger.Infof("Creating container from dir %s", sourceDir)
-	addLayer, err := utils.LayerFromDir(sourceDir)
-	if err != nil {
-		b.logger.Errorf("error creating layer: %s", err)
-		return err
-	}
-	b.logger.Debugf("Appending layer to image")
-	newImg, err := mutate.AppendLayers(empty.Image, addLayer)
-	if err != nil {
-		b.logger.Errorf("error appending layer: %s", err)
-		return err
-	}
-	b.logger.Debugf("Tagging image")
-	tag, err := name.NewTag(fmt.Sprintf("kairos_uki:%s", version))
-	b.logger.Debugf("Tag: " + tag.String())
-	if err != nil {
-		b.logger.Errorf("error creating tag: %s", err)
-		return err
-	}
-	b.logger.Debugf("Writing image")
-	if s, err := daemon.Write(tag, newImg); err != nil {
-		b.logger.Errorf("error writing image: %s", err)
-		return err
-	} else {
-		b.logger.Debugf("created image: " + s)
-	}
-	b.logger.Infof("Done building %s at: %s", b.outputType, tag.String())
+	/*
+		b.logger.Infof("Creating container from dir %s", sourceDir)
+		addLayer, err := utils.LayerFromDir(sourceDir)
+		if err != nil {
+			b.logger.Errorf("error creating layer: %s", err)
+			return err
+		}
+		b.logger.Debugf("Appending layer to image")
+		newImg, err := mutate.AppendLayers(empty.Image, addLayer)
+		if err != nil {
+			b.logger.Errorf("error appending layer: %s", err)
+			return err
+		}
+		b.logger.Debugf("Tagging image")
+		tag, err := name.NewTag(fmt.Sprintf("kairos_uki:%s", version))
+		b.logger.Debugf("Tag: " + tag.String())
+		if err != nil {
+			b.logger.Errorf("error creating tag: %s", err)
+			return err
+		}
+		b.logger.Debugf("Writing image")
+		if s, err := daemon.Write(tag, newImg); err != nil {
+			b.logger.Errorf("error writing image: %s", err)
+			return err
+		} else {
+			b.logger.Debugf("created image: " + s)
+		}
+		b.logger.Infof("Done building %s at: %s", b.outputType, tag.String())
+
+	*/
 	return err
 }
 
