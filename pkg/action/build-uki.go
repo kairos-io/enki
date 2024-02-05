@@ -528,7 +528,7 @@ func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
 		return err
 	}
 	b.logger.Infof("Done building %s at: %s", b.outputType, finalImage)
-	
+
 	return err
 }
 

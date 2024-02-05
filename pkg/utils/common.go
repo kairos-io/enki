@@ -7,7 +7,6 @@ import (
 	containerdCompression "github.com/containerd/containerd/archive/compression"
 	"github.com/google/go-containerregistry/pkg/name"
 	container "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -161,19 +160,23 @@ func CreateTar(log v1.Logger, srctar, dstimageTar, imagename, architecture, OS s
 	}
 
 	// Lets try to load it into the docker daemon?
-	tag, err := name.NewTag(imagename)
-	if err != nil {
-		log.Warnf("Cannot create tag for %s: %s", imagename, err)
-	}
-	if err == nil {
-		// Best effort only, just try and forget
-		out, err := daemon.Write(tag, img)
+	// Code left here in case we want to use it in the future
+	/*
+		tag, err := name.NewTag(imagename)
+
 		if err != nil {
-			log.Warnf("Cannot write image %s to daemon: %s\noutput: %s", imagename, err, out)
-		} else {
-			log.Infof("Image %s written to daemon", tag.String())
+			log.Warnf("Cannot create tag for %s: %s", imagename, err)
 		}
-	}
+		if err == nil {
+			// Best effort only, just try and forget
+			out, err := daemon.Write(tag, img)
+			if err != nil {
+				log.Warnf("Cannot write image %s to daemon: %s\noutput: %s", imagename, err, out)
+			} else {
+				log.Infof("Image %s written to daemon", tag.String())
+			}
+		}
+	*/
 
 	return tarball.Write(newRef, img, dstFile)
 
