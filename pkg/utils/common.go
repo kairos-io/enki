@@ -2,18 +2,22 @@ package utils
 
 import (
 	"archive/tar"
-	"bytes"
+	"compress/gzip"
 	"fmt"
+	containerdCompression "github.com/containerd/containerd/archive/compression"
+	"github.com/google/go-containerregistry/pkg/name"
 	container "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/viper"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // CreateSquashFS creates a squash file at destination from a source, with options
@@ -67,55 +71,152 @@ func GetUkiCmdline() []string {
 
 }
 
-// LayerFromDir Converts a directory to a container layer by tarballing it
-func LayerFromDir(root string) (container.Layer, error) {
-	var b bytes.Buffer
-	tw := tar.NewWriter(&b)
+// Tar takes a source and variable writers and walks 'source' writing each file
+// found to the tar writer; the purpose for accepting multiple writers is to allow
+// for multiple outputs (for example a file, or md5 hash)
+func Tar(src string, writers ...io.Writer) error {
+	// ensure the src actually exists before trying to tar it
+	if _, err := os.Stat(src); err != nil {
+		return fmt.Errorf("Unable to tar files - %v", err.Error())
+	}
 
-	err := filepath.Walk(root, func(fp string, info os.FileInfo, err error) error {
+	mw := io.MultiWriter(writers...)
+
+	gzw := gzip.NewWriter(mw)
+	defer gzw.Close()
+
+	tw := tar.NewWriter(gzw)
+	defer tw.Close()
+
+	// walk path
+	return filepath.Walk(src, func(file string, fi os.FileInfo, err error) error {
+
+		// return on any error
 		if err != nil {
+			return err
+		}
+
+		// return on non-regular files (thanks to [kumo](https://medium.com/@komuw/just-like-you-did-fbdd7df829d3) for this suggested update)
+		if !fi.Mode().IsRegular() {
 			return nil
 		}
-		rel, err := filepath.Rel(root, fp)
+
+		// create a new dir/file header
+		header, err := tar.FileInfoHeader(fi, fi.Name())
 		if err != nil {
-			return fmt.Errorf("failed to calculate relative path: %w", err)
+			return err
 		}
 
-		hdr := &tar.Header{
-			Name: path.Join("/", filepath.ToSlash(rel)),
-			Mode: int64(info.Mode()),
+		// update the name to correctly reflect the desired destination when untaring
+		header.Name = strings.TrimPrefix(strings.Replace(file, src, "", -1), string(filepath.Separator))
+
+		// write the header
+		if err := tw.WriteHeader(header); err != nil {
+			return err
 		}
 
-		if !info.IsDir() {
-			hdr.Size = info.Size()
+		// open files for taring
+		f, err := os.Open(file)
+		if err != nil {
+			return err
 		}
 
-		if info.Mode().IsDir() {
-			hdr.Typeflag = tar.TypeDir
-		} else {
-			hdr.Typeflag = tar.TypeReg
+		// copy file data into tar writer
+		if _, err := io.Copy(tw, f); err != nil {
+			return err
 		}
 
-		if err := tw.WriteHeader(hdr); err != nil {
-			return fmt.Errorf("failed to write tar header: %w", err)
-		}
-		if !info.IsDir() {
-			f, err := os.Open(fp)
-			if err != nil {
-				return err
-			}
-			if _, err := io.Copy(tw, f); err != nil {
-				return fmt.Errorf("failed to read file into the tar: %w", err)
-			}
-			f.Close()
-		}
+		// manually close here after each file operation; defering would cause each file close
+		// to wait until all operations have completed.
+		f.Close()
+
 		return nil
 	})
+}
+
+// CreateTar a imagetarball from a standard tarball
+func CreateTar(log v1.Logger, srctar, dstimageTar, imagename, architecture, OS string) error {
+
+	dstFile, err := os.Create(dstimageTar)
 	if err != nil {
-		return nil, fmt.Errorf("failed to scan files: %w", err)
+		return fmt.Errorf("Cannot create %s: %s", dstimageTar, err)
 	}
-	if err := tw.Close(); err != nil {
-		return nil, fmt.Errorf("failed to finish tar: %w", err)
+	defer dstFile.Close()
+
+	newRef, img, err := imageFromTar(imagename, architecture, OS, func() (io.ReadCloser, error) {
+		f, err := os.Open(srctar)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open %s: %s", srctar, err)
+		}
+		decompressed, err := containerdCompression.DecompressStream(f)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open %s: %s", srctar, err)
+		}
+
+		return decompressed, nil
+	})
+	if err != nil {
+		return err
 	}
-	return tarball.LayerFromReader(&b)
+
+	// Lets try to load it into the docker daemon?
+	// Code left here in case we want to use it in the future
+	/*
+		tag, err := name.NewTag(imagename)
+
+		if err != nil {
+			log.Warnf("Cannot create tag for %s: %s", imagename, err)
+		}
+		if err == nil {
+			// Best effort only, just try and forget
+			out, err := daemon.Write(tag, img)
+			if err != nil {
+				log.Warnf("Cannot write image %s to daemon: %s\noutput: %s", imagename, err, out)
+			} else {
+				log.Infof("Image %s written to daemon", tag.String())
+			}
+		}
+	*/
+
+	return tarball.Write(newRef, img, dstFile)
+
+}
+
+func imageFromTar(imagename, architecture, OS string, opener func() (io.ReadCloser, error)) (name.Reference, container.Image, error) {
+	newRef, err := name.ParseReference(imagename)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	layer, err := tarball.LayerFromOpener(opener)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	baseImage := empty.Image
+	cfg, err := baseImage.ConfigFile()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cfg.Architecture = architecture
+	cfg.OS = OS
+
+	baseImage, err = mutate.ConfigFile(baseImage, cfg)
+	if err != nil {
+		return nil, nil, err
+	}
+	img, err := mutate.Append(baseImage, mutate.Addendum{
+		Layer: layer,
+		History: container.History{
+			CreatedBy: "Enki",
+			Comment:   "Custom image",
+			Created:   container.Time{Time: time.Now()},
+		},
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return newRef, img, nil
 }

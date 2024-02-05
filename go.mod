@@ -3,6 +3,7 @@ module github.com/kairos-io/enki
 go 1.21
 
 require (
+	github.com/containerd/containerd v1.7.7
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/go-containerregistry v0.17.0
 	github.com/kairos-io/kairos-agent/v2 v2.7.8
@@ -39,7 +40,6 @@ require (
 	github.com/cloudflare/circl v1.3.3 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
-	github.com/containerd/containerd v1.7.7 // indirect
 	github.com/containerd/continuity v0.4.2 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
