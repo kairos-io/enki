@@ -528,37 +528,7 @@ func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
 		return err
 	}
 	b.logger.Infof("Done building %s at: %s", b.outputType, finalImage)
-
-	/*
-		b.logger.Infof("Creating container from dir %s", sourceDir)
-		addLayer, err := utils.LayerFromDir(sourceDir)
-		if err != nil {
-			b.logger.Errorf("error creating layer: %s", err)
-			return err
-		}
-		b.logger.Debugf("Appending layer to image")
-		newImg, err := mutate.AppendLayers(empty.Image, addLayer)
-		if err != nil {
-			b.logger.Errorf("error appending layer: %s", err)
-			return err
-		}
-		b.logger.Debugf("Tagging image")
-		tag, err := name.NewTag(fmt.Sprintf("kairos_uki:%s", version))
-		b.logger.Debugf("Tag: " + tag.String())
-		if err != nil {
-			b.logger.Errorf("error creating tag: %s", err)
-			return err
-		}
-		b.logger.Debugf("Writing image")
-		if s, err := daemon.Write(tag, newImg); err != nil {
-			b.logger.Errorf("error writing image: %s", err)
-			return err
-		} else {
-			b.logger.Debugf("created image: " + s)
-		}
-		b.logger.Infof("Done building %s at: %s", b.outputType, tag.String())
-
-	*/
+	
 	return err
 }
 
