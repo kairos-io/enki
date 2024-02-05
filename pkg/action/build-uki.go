@@ -64,6 +64,21 @@ func (b *BuildUKIAction) Run() error {
 	}
 	defer os.RemoveAll(sourceDir)
 
+	if viper.GetString("overlay") != "" {
+		b.logger.Infof("Adding files from %s to rootfs", viper.GetString("overlay"))
+		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay")))
+		if err != nil {
+			b.logger.Errorf("error creating overlay image: %s", err)
+			return err
+		}
+		_, err = b.e.DumpSource(sourceDir, overlay)
+
+		if err != nil {
+			b.logger.Errorf("error copying overlay image: %s", err)
+			return err
+		}
+	}
+
 	// Store the version so we only need to check it once
 	kairosVersion, err := findKairosVersion(sourceDir)
 	if err != nil {

@@ -8,6 +8,7 @@ import (
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"os"
 	"strings"
 )
 
@@ -39,6 +40,20 @@ func NewBuildUKICmd() *cobra.Command {
 			}
 			if artifact != string(constants.DefaultOutput) && artifact != string(constants.IsoOutput) && artifact != string(constants.ContainerOutput) {
 				return fmt.Errorf("invalid output type: %s", artifact)
+			}
+
+			overlay, _ := cmd.Flags().GetString("overlay")
+			if overlay != "" {
+				// Check if overlay dir exists by doing an os.stat
+				// If it does not exist, return an error
+				ol, err := os.Stat(overlay)
+				if err != nil {
+					return fmt.Errorf("overlay directory does not exist: %s", overlay)
+				}
+				if !ol.IsDir() {
+					return fmt.Errorf("overlay is not a directory: %s", overlay)
+				}
+
 			}
 
 			return CheckRoot()
@@ -81,6 +96,7 @@ func NewBuildUKICmd() *cobra.Command {
 
 	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
 	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
+	c.Flags().StringP("overlay", "o", "", "Dir with files to be applied to the image.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
 	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
