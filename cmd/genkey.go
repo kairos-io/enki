@@ -2,13 +2,14 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+
 	"github.com/gofrs/uuid"
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"os/exec"
-	"path/filepath"
 )
 
 func NewGenkeyCmd() *cobra.Command {
@@ -46,6 +47,7 @@ func NewGenkeyCmd() *cobra.Command {
 				cmd := exec.Command(
 					"openssl",
 					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s/", name),
+					"-days", viper.GetString("expiration-in-days"),
 					"-keyout", key,
 					"-out", pem,
 				)
@@ -73,7 +75,7 @@ func NewGenkeyCmd() *cobra.Command {
 				)
 				out, err = cmd.CombinedOutput()
 				if err != nil {
-					l.Errorf("Error generating %s: %s", keyType, string(out))
+					l.Errorf("Error generating %s: %s\n%s", keyType, string(out), err.Error())
 					return err
 				}
 				l.Infof("%s generated at %s", keyType, esl)
@@ -120,6 +122,7 @@ func NewGenkeyCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringP("output", "o", "keys/", "Output directory for the keys")
+	c.Flags().StringP("expiration-in-days", "e", "365", "In how many days from today should the certificates expire")
 	return c
 }
 
