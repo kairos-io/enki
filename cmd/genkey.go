@@ -44,13 +44,15 @@ func NewGenkeyCmd() *cobra.Command {
 				der := filepath.Join(output, fmt.Sprintf("%s.der", keyType))
 				auth := filepath.Join(output, fmt.Sprintf("%s.auth", keyType))
 				esl := filepath.Join(output, fmt.Sprintf("%s.esl", keyType))
-				cmd := exec.Command(
-					"openssl",
+				args := []string{
 					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s/", name),
-					"-days", viper.GetString("expiration-in-days"),
 					"-keyout", key,
 					"-out", pem,
-				)
+				}
+				if viper.GetString("expiration-in-days") != "" {
+					args = append(args, "-days", viper.GetString("expiration-in-days"))
+				}
+				cmd := exec.Command("openssl", args...)
 				out, err := cmd.CombinedOutput()
 				if err != nil {
 					l.Errorf("Error generating %s: %s", keyType, string(out))
@@ -123,6 +125,8 @@ func NewGenkeyCmd() *cobra.Command {
 	}
 	c.Flags().StringP("output", "o", "keys/", "Output directory for the keys")
 	c.Flags().StringP("expiration-in-days", "e", "365", "In how many days from today should the certificates expire")
+
+	viper.BindPFlag("expiration-in-days", c.Flags().Lookup("expiration-in-days"))
 	return c
 }
 
