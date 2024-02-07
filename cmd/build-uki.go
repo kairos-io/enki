@@ -2,14 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/kairos-io/enki/pkg/action"
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"strings"
 )
 
 // NewBuildUKICmd returns a new instance of the build-uki subcommand and appends it to
@@ -97,6 +98,7 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
 	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	c.Flags().StringP("overlay", "o", "", "Dir with files to be applied to the image.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
+	c.Flags().StringP("boot-branding", "", "Kairos", "Boot title branding")
 	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
