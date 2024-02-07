@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-// NewBuildISOCmd returns a new instance of the build-iso subcommand and appends it to
+// NewBuildUKICmd returns a new instance of the build-uki subcommand and appends it to
 // the root command.
 func NewBuildUKICmd() *cobra.Command {
 	c := &cobra.Command{
