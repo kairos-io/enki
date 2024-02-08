@@ -68,7 +68,6 @@ func GetUkiCmdline() []string {
 		}
 		return cmdline
 	}
-
 }
 
 // Tar takes a source and variable writers and walks 'source' writing each file

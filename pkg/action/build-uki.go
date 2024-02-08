@@ -3,8 +3,6 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/kairos-io/enki/pkg/constants"
-	"github.com/spf13/viper"
 	"io"
 	"math"
 	"os"
@@ -13,6 +11,9 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/spf13/viper"
 
 	"github.com/sanity-io/litter"
 	"github.com/u-root/u-root/pkg/cpio"
@@ -457,9 +458,11 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 		cmdlineForConf = extraCmdline
 	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
+
+	title := viper.GetString("boot-branding")
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
-	data := fmt.Sprintf("title Kairos %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", b.version, cmdlineForConf, finalEfiName, b.version, strings.Trim(cmdline, " "))
+	data := fmt.Sprintf("title %s %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", title, b.version, cmdlineForConf, finalEfiName, b.version, strings.Trim(cmdline, " "))
 	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
