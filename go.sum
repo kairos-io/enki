@@ -353,6 +353,8 @@ github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfV
 github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7VTCxuUUipMqKk8s4w=
 github.com/kairos-io/kairos-agent/v2 v2.7.8 h1:oKkiq6TG7JgkiWdwJsuuQr3aAds6Xct6DTg2EJFpjzU=
 github.com/kairos-io/kairos-agent/v2 v2.7.8/go.mod h1:87SgUzmExc8YEAxlUn2h5usbpJpFrE8QeGTnxVfRKlM=
+github.com/kairos-io/kairos-agent/v2 v2.7.9 h1:8bAokGFhU5GHnuqge/qWpeVbZmd1v05PznJNoLDs1wI=
+github.com/kairos-io/kairos-agent/v2 v2.7.9/go.mod h1:87SgUzmExc8YEAxlUn2h5usbpJpFrE8QeGTnxVfRKlM=
 github.com/kairos-io/kairos-sdk v0.0.24 h1:BhOPrn8Hf8SVEX3eQKS+oJi2UFVL4BYNIl6FjYlni9U=
 github.com/kairos-io/kairos-sdk v0.0.24/go.mod h1:17dpFG2d3Q/TcT86DlLK5nNXEjlSrkYl7bsvO2cpYGE=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c h1:eKb4PqwAMhlqwXw0W3atpKaYaPGlXE/Fwh+xpCEYaPk=
