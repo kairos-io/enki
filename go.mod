@@ -6,7 +6,7 @@ require (
 	github.com/containerd/containerd v1.7.13
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/go-containerregistry v0.17.0
-	github.com/kairos-io/kairos-agent/v2 v2.7.10
+	github.com/kairos-io/kairos-agent/v2 v2.7.11
 	github.com/kairos-io/kairos-sdk v0.0.24
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.15.0
