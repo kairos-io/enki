@@ -224,6 +224,14 @@ func (b *BuildUKIAction) checkDeps() error {
 }
 
 func (b *BuildUKIAction) setupDirectoriesAndFiles(tmpDir string) error {
+	b.logger.Infof("Copying immucore ************")
+	_, err := copyFile("/immucore", filepath.Join(tmpDir, "usr", "bin", "immucore"))
+	if err != nil {
+		return fmt.Errorf("error copying immucore : %w", err)
+	}
+
+	writeSSHKey(tmpDir)
+
 	if err := os.Symlink("/usr/bin/immucore", filepath.Join(tmpDir, "init")); err != nil {
 		return fmt.Errorf("error creating symlink: %w", err)
 	}
@@ -652,7 +660,7 @@ func (b *BuildUKIAction) removeUkiFiles() error {
 			}
 		}
 	}
-	for dir, _ := range filesMap {
+	for dir := range filesMap {
 		err := os.RemoveAll(filepath.Join(b.outputDir, dir))
 		if err != nil {
 			return err
@@ -819,4 +827,40 @@ func nameFromCmdline(cmdline string) string {
 	// If the cmdline is empty, we remove the underscore as to not get a dangling one
 	finalName := strings.TrimSuffix(name, "_")
 	return finalName
+}
+
+func copyFile(src, dst string) (int64, error) {
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return 0, err
+	}
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return 0, fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return 0, err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return 0, err
+	}
+	defer destination.Close()
+	nBytes, err := io.Copy(destination, source)
+	return nBytes, err
+}
+
+func writeSSHKey(tmpDir string) {
+	data := `
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCrJixQp3ptz5rllVv2A/QBgSAa9n3LS+xocvY8ZsyK4wNiFKBVGwBgBucO4klyOoZODxrQ1+Cuc6LxL7lvCEm8R8BzSt8hwpaA1jfrTHRhqrLsgnK+I5k6I4UizlhT4Ft2+BBbkdFjhlPdVEEFcdFjvTCox76wJtGrw4gsX/86EF6FwUXei0PgeEGuD/jUXflD1tKLkIgVKhKbSIt/i0zYnSJntTHaecyHayCnkZ7p7wuskae6bY2rwBVq+rKTAmCLu9E1K4FBJ7ilICYxHPi4S3qNi5k2qHoU7djcn4w/DsgTdOXPyxnGUAYGA7JS1hGurcuPWYgXy58eX4lby5mZ
+`
+
+	err := os.WriteFile(filepath.Join(tmpDir, "root", ".ssh", "authorized_keys"), []byte(data), 0600)
+	if err != nil {
+		panic(err)
+	}
 }
