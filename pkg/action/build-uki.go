@@ -191,8 +191,6 @@ func (b *BuildUKIAction) extractImage() (string, error) {
 }
 
 func (b *BuildUKIAction) checkDeps() error {
-	var neededFiles []string
-
 	neededBinaries := []string{
 		"/usr/lib/systemd/ukify",
 		"sbsign",
@@ -203,15 +201,6 @@ func (b *BuildUKIAction) checkDeps() error {
 		"xorriso",
 	}
 
-	neededFilesx86 := []string{
-		constants.UkiSystemdBootStubx86,
-		constants.UkiSystemdBootx86,
-	}
-	neededFilesarm64 := []string{
-		constants.UkiSystemdBootStubArm,
-		constants.UkiSystemdBootArm,
-	}
-
 	for _, b := range neededBinaries {
 		_, err := exec.LookPath(b)
 		if err != nil {
@@ -219,12 +208,9 @@ func (b *BuildUKIAction) checkDeps() error {
 		}
 	}
 
-	if b.arch == "x86_64" || b.arch == "amd64" {
-		neededFiles = neededFilesx86
-	} else if b.arch == "aarch64" || b.arch == "arm64" {
-		neededFiles = neededFilesarm64
-	} else {
-		return fmt.Errorf("unsupported arch: %s", b.arch)
+	neededFiles, err := b.getEfiNeededFiles()
+	if err != nil {
+		return err
 	}
 
 	for _, b := range neededFiles {
@@ -415,13 +401,9 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	finalEfiName := strings.TrimSuffix(b.version+"_"+strings.Replace(cmdlineName, " ", "_", -1), "_") + ".efi"
 	b.logger.Infof("Generating: " + finalEfiName)
 
-	var stubFile string
-	if b.arch == "x86_64" || b.arch == "amd64" {
-		stubFile = constants.UkiSystemdBootStubx86
-	} else if b.arch == "aarch64" || b.arch == "arm64" {
-		stubFile = constants.UkiSystemdBootStubArm
-	} else {
-		return fmt.Errorf("unsupported arch: %s", b.arch)
+	stubFile, err := b.getEfiStub()
+	if err != nil {
+		return err
 	}
 
 	cmd := exec.Command("/usr/lib/systemd/ukify",
@@ -685,6 +667,32 @@ func (b *BuildUKIAction) removeUkiFiles() error {
 		}
 	}
 	return nil
+}
+
+func (b *BuildUKIAction) getEfiStub() (string, error) {
+	if b.arch == "x86_64" || b.arch == "amd64" {
+		return constants.UkiSystemdBootStubx86, nil
+	} else if b.arch == "aarch64" || b.arch == "arm64" {
+		return constants.UkiSystemdBootStubArm, nil
+	} else {
+		return "", nil
+	}
+}
+
+func (b *BuildUKIAction) getEfiNeededFiles() ([]string, error) {
+	if b.arch == "x86_64" || b.arch == "amd64" {
+		return []string{
+			constants.UkiSystemdBootStubx86,
+			constants.UkiSystemdBootx86,
+		}, nil
+	} else if b.arch == "aarch64" || b.arch == "arm64" {
+		return []string{
+			constants.UkiSystemdBootStubArm,
+			constants.UkiSystemdBootArm,
+		}, nil
+	} else {
+		return nil, fmt.Errorf("unsupported arch: %s", b.arch)
+	}
 }
 
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
