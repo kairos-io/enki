@@ -63,7 +63,7 @@ const (
 	EfiFallbackNamex86 = "BOOTX64.EFI"
 	EfiFallbackNameArm = "BOOTAA64.EFI"
 
-	ArtifactBaseName = "artifact"
+	ArtifactBaseName = "norole"
 )
 
 // GetDefaultSquashfsOptions returns the default options to use when creating a squashfs

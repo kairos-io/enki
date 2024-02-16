@@ -808,10 +808,10 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 // so in that case we dont add anything to the efi name/conf name/cmdline inside the config
 // For the other ones, we add the cmdline to the efi name and the cmdline to the conf file
 // so you get
-// - artifact.efi
-// - artifact.conf
-// - artifact_interactive-install.efi
-// - artifact_interactive-install.conf
+// - norole.efi
+// - norole.conf
+// - norole_interactive-install.efi
+// - norole_interactive-install.conf
 // This is mostly for convenience in generating the names as the real data is stored in the config file
 // but it can easily be used to identify the efi file and the conf file.
 func nameFromCmdline(cmdline string) string {
