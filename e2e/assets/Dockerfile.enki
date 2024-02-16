@@ -3,7 +3,7 @@ ARG LUET_VERSION=0.35.0
 
 FROM quay.io/luet/base:$LUET_VERSION AS luet
 
-FROM fedora:39
+FROM fedora:40
 COPY --from=luet /usr/bin/luet /usr/bin/luet
 ENV LUET_NOLOCK=true
 ENV TMPDIR=/tmp
