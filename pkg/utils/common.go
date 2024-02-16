@@ -219,3 +219,11 @@ func imageFromTar(imagename, architecture, OS string, opener func() (io.ReadClos
 
 	return newRef, img, nil
 }
+
+func IsAmd64(arch string) bool {
+	return arch == constants.ArchAmd64 || arch == constants.Archx86
+}
+
+func IsArm64(arch string) bool {
+	return arch == constants.ArchArm64 || arch == constants.Archaarch64
+}

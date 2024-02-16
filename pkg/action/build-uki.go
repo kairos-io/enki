@@ -433,10 +433,10 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 func (b *BuildUKIAction) sbSign(sourceDir string) error {
 	var systemdBoot string
 	var outputEfi string
-	if b.arch == "x86_64" || b.arch == "amd64" {
+	if utils.IsAmd64(b.arch) {
 		systemdBoot = constants.UkiSystemdBootx86
 		outputEfi = constants.EfiFallbackNamex86
-	} else if b.arch == "aarch64" || b.arch == "arm64" {
+	} else if utils.IsArm64(b.arch) {
 		systemdBoot = constants.UkiSystemdBootArm
 		outputEfi = constants.EfiFallbackNameArm
 	} else {
@@ -670,9 +670,9 @@ func (b *BuildUKIAction) removeUkiFiles() error {
 }
 
 func (b *BuildUKIAction) getEfiStub() (string, error) {
-	if b.arch == "x86_64" || b.arch == "amd64" {
+	if utils.IsAmd64(b.arch) {
 		return constants.UkiSystemdBootStubx86, nil
-	} else if b.arch == "aarch64" || b.arch == "arm64" {
+	} else if utils.IsArm64(b.arch) {
 		return constants.UkiSystemdBootStubArm, nil
 	} else {
 		return "", nil
@@ -680,12 +680,12 @@ func (b *BuildUKIAction) getEfiStub() (string, error) {
 }
 
 func (b *BuildUKIAction) getEfiNeededFiles() ([]string, error) {
-	if b.arch == "x86_64" || b.arch == "amd64" {
+	if utils.IsAmd64(b.arch) {
 		return []string{
 			constants.UkiSystemdBootStubx86,
 			constants.UkiSystemdBootx86,
 		}, nil
-	} else if b.arch == "aarch64" || b.arch == "arm64" {
+	} else if utils.IsArm64(b.arch) {
 		return []string{
 			constants.UkiSystemdBootStubArm,
 			constants.UkiSystemdBootArm,
