@@ -48,12 +48,20 @@ const (
 	NoWriteDirPerm = 0555 | os.ModeDir
 	TempDirPerm    = os.ModePerm | os.ModeSticky | os.ModeDir
 
-	ArchAmd64 = "amd64"
-	Archx86   = "x86_64"
-	ArchArm64 = "arm64"
+	ArchAmd64   = "amd64"
+	Archx86     = "x86_64"
+	ArchArm64   = "arm64"
+	Archaarch64 = "aarch64"
 
-	UkiCmdline        = "console=ttyS0 console=tty1 net.ifnames=1 rd.immucore.oemlabel=COS_OEM rd.immucore.debug rd.immucore.oemtimeout=2 rd.immucore.uki selinux=0"
-	UkiCmdlineInstall = "install-mode"
+	UkiCmdline            = "console=ttyS0 console=tty1 net.ifnames=1 rd.immucore.oemlabel=COS_OEM rd.immucore.debug rd.immucore.oemtimeout=2 rd.immucore.uki selinux=0"
+	UkiCmdlineInstall     = "install-mode"
+	UkiSystemdBootx86     = "/usr/kairos/systemd-bootx64.efi"
+	UkiSystemdBootStubx86 = "/usr/kairos/linuxx64.efi.stub"
+	UkiSystemdBootArm     = "/usr/kairos/systemd-bootaa64.efi"
+	UkiSystemdBootStubArm = "/usr/kairos/linuxaa64.efi.stub"
+
+	EfiFallbackNamex86 = "BOOTX64.EFI"
+	EfiFallbackNameArm = "BOOTAA64.EFI"
 )
 
 // GetDefaultSquashfsOptions returns the default options to use when creating a squashfs

@@ -11,6 +11,14 @@
   "timezone": "Europe/Brussels",
   "packageRules": [
     {
+      "groupName": "repositories",
+      "matchPackagePatterns": ["^quay.io/kairos/packages*"]
+    },
+    {
+      "matchPackagePatterns": ["^quay.io/kairos/packages*"],
+      "versioning": "regex:^(?<major>\\d{14})(?<compatibility>-repository\\.yaml)"
+    },
+    {
       "matchUpdateTypes": ["patch"],
       "automerge": true
     }
@@ -24,6 +32,14 @@
         "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)( versioning=(?<versioning>.*?))?\\sARG\\s+.+_VERSION=\"?(?<currentValue>.*?)\"?\\s"
       ],
       "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver{{/if}}"
+    },
+    {
+      "fileMatch": [
+        "^luet-*.yaml$"
+      ],
+      "matchStrings": [
+        "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)?\\s+reference:\\s(?<currentValue>.*?)\\s"
+      ]
     }
   ]
 }

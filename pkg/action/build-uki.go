@@ -3,6 +3,8 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
+	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/spf13/viper"
 	"io"
 	"math"
 	"os"
@@ -11,9 +13,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/kairos-io/enki/pkg/constants"
-	"github.com/spf13/viper"
 
 	"github.com/sanity-io/litter"
 	"github.com/u-root/u-root/pkg/cpio"
@@ -33,6 +32,7 @@ type BuildUKIAction struct {
 	logger        v1.Logger
 	outputType    string
 	version       string
+	arch          string
 }
 
 func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, outputType string) *BuildUKIAction {
@@ -43,6 +43,7 @@ func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, k
 		outputDir:     outputDir,
 		keysDirectory: keysDirectory,
 		outputType:    outputType,
+		arch:          cfg.Arch,
 	}
 	b.logger.Debugf("BuildUKIAction: %+v", litter.Sdump(b))
 	return b
@@ -200,16 +201,16 @@ func (b *BuildUKIAction) checkDeps() error {
 		"xorriso",
 	}
 
-	neededFiles := []string{
-		"/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
-		"/usr/lib/systemd/boot/efi/systemd-bootx64.efi",
-	}
-
 	for _, b := range neededBinaries {
 		_, err := exec.LookPath(b)
 		if err != nil {
 			return err
 		}
+	}
+
+	neededFiles, err := b.getEfiNeededFiles()
+	if err != nil {
+		return err
 	}
 
 	for _, b := range neededFiles {
@@ -399,13 +400,19 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	}
 	finalEfiName := strings.TrimSuffix(b.version+"_"+strings.Replace(cmdlineName, " ", "_", -1), "_") + ".efi"
 	b.logger.Infof("Generating: " + finalEfiName)
+
+	stubFile, err := b.getEfiStub()
+	if err != nil {
+		return err
+	}
+
 	cmd := exec.Command("/usr/lib/systemd/ukify",
 		"--linux", "vmlinuz",
 		"--initrd", "initrd",
 		"--cmdline", cmdline,
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
 		"--uname", uname,
-		"--stub", "/usr/lib/systemd/boot/efi/linuxx64.efi.stub",
+		"--stub", stubFile,
 		"--secureboot-private-key", filepath.Join(b.keysDirectory, "DB.key"),
 		"--secureboot-certificate", filepath.Join(b.keysDirectory, "DB.pem"),
 		"--pcr-private-key", filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
@@ -424,11 +431,23 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 // TODO: the efi file should come from the downloaded image, not from the
 // enki running OS.
 func (b *BuildUKIAction) sbSign(sourceDir string) error {
+	var systemdBoot string
+	var outputEfi string
+	if utils.IsAmd64(b.arch) {
+		systemdBoot = constants.UkiSystemdBootx86
+		outputEfi = constants.EfiFallbackNamex86
+	} else if utils.IsArm64(b.arch) {
+		systemdBoot = constants.UkiSystemdBootArm
+		outputEfi = constants.EfiFallbackNameArm
+	} else {
+		return fmt.Errorf("unsupported arch: %s", b.arch)
+	}
+
 	cmd := exec.Command("sbsign",
 		"--key", filepath.Join(b.keysDirectory, "DB.key"),
 		"--cert", filepath.Join(b.keysDirectory, "DB.pem"),
-		"--output", filepath.Join(sourceDir, "BOOTX64.EFI"),
-		"/usr/lib/systemd/boot/efi/systemd-bootx64.efi",
+		"--output", filepath.Join(sourceDir, outputEfi),
+		systemdBoot,
 	)
 
 	out, err := cmd.CombinedOutput()
@@ -648,6 +667,32 @@ func (b *BuildUKIAction) removeUkiFiles() error {
 		}
 	}
 	return nil
+}
+
+func (b *BuildUKIAction) getEfiStub() (string, error) {
+	if utils.IsAmd64(b.arch) {
+		return constants.UkiSystemdBootStubx86, nil
+	} else if utils.IsArm64(b.arch) {
+		return constants.UkiSystemdBootStubArm, nil
+	} else {
+		return "", nil
+	}
+}
+
+func (b *BuildUKIAction) getEfiNeededFiles() ([]string, error) {
+	if utils.IsAmd64(b.arch) {
+		return []string{
+			constants.UkiSystemdBootStubx86,
+			constants.UkiSystemdBootx86,
+		}, nil
+	} else if utils.IsArm64(b.arch) {
+		return []string{
+			constants.UkiSystemdBootStubArm,
+			constants.UkiSystemdBootArm,
+		}, nil
+	} else {
+		return nil, fmt.Errorf("unsupported arch: %s", b.arch)
+	}
 }
 
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
