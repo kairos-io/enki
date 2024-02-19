@@ -162,7 +162,7 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 	} else {
 		// Get the generic efi file that we produce from the default cmdline
 		// This is the one name that has nothing added, just the version
-		finalEfiConf = nameFromCmdline(b.version, constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
+		finalEfiConf = nameFromCmdline(constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
 	}
 	// Set that as default selection for booting
 	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\n", finalEfiConf)
@@ -390,15 +390,7 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 		return err
 	}
 
-	// name: kairosVersion + cmdline + .efi
-	// for the cmdline, we remove the shared cmdline values and only keep the extra values added by the user
-	// we also replace spaces with underscores
-	cmdlineName := strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
-	// For the default install entry, do not add anything on the efi name
-	if cmdlineName == constants.UkiCmdlineInstall {
-		cmdlineName = ""
-	}
-	finalEfiName := strings.TrimSuffix(b.version+"_"+strings.Replace(cmdlineName, " ", "_", -1), "_") + ".efi"
+	finalEfiName := nameFromCmdline(cmdline) + ".efi"
 	b.logger.Infof("Generating: " + finalEfiName)
 
 	stubFile, err := b.getEfiStub()
@@ -462,7 +454,7 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	var cmdlineForConf string
 	// This is stored in the config
 	var extraCmdline string
-	finalEfiName := nameFromCmdline(b.version, cmdline)
+	finalEfiName := nameFromCmdline(cmdline)
 	// For the config title we get only the extra cmdline we added, no replacement of spaces with underscores needed
 	extraCmdline = strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
 	// For the default install entry, do not add anything on the config
@@ -640,7 +632,7 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	// Add the kairos efi files and the loader conf files for each cmdline
 	cmdlines := utils.GetUkiCmdline()
 	for _, cmdline := range cmdlines {
-		finalEfiName := nameFromCmdline(b.version, cmdline)
+		finalEfiName := nameFromCmdline(cmdline)
 		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
 		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
 	}
@@ -660,7 +652,7 @@ func (b *BuildUKIAction) removeUkiFiles() error {
 			}
 		}
 	}
-	for dir, _ := range filesMap {
+	for dir := range filesMap {
 		err := os.RemoveAll(filepath.Join(b.outputDir, dir))
 		if err != nil {
 			return err
@@ -808,16 +800,13 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 // so in that case we dont add anything to the efi name/conf name/cmdline inside the config
 // For the other ones, we add the cmdline to the efi name and the cmdline to the conf file
 // so you get
-// - v3.0.0-alpha1.efi
-// - v3.0.0-alpha1.conf
-// - v3.0.0-alpha1_interactive-install.efi
-// - v3.0.0-alpha1_interactive-install.conf
+// - norole.efi
+// - norole.conf
+// - norole_interactive-install.efi
+// - norole_interactive-install.conf
 // This is mostly for convenience in generating the names as the real data is stored in the config file
-// but it can easily be used to identify the efi file and the conf file
-// FULLVERSION_CMDLINE is the format so we can split on _ and get the version and the cmdline separated.
-// Spaces in the cmdline are replaced with underscores, so we cant get the cmdline from the name easily
-// that why we store it on the config file, along with the version
-func nameFromCmdline(version, cmdline string) string {
+// but it can easily be used to identify the efi file and the conf file.
+func nameFromCmdline(cmdline string) string {
 	// Remove the default cmdline from the current cmdline
 	cmdlineForEfi := strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
 	// For the default install entry, do not add anything on the efi name
@@ -825,9 +814,8 @@ func nameFromCmdline(version, cmdline string) string {
 		cmdlineForEfi = ""
 	}
 	// Change spaces to underscores
-	cleanCmdline := strings.Replace(cmdlineForEfi, " ", "_", -1)
-	// Firs step we get a version + underscore to separete the version from the cmdline and cmdline
-	name := version + "_" + cleanCmdline
+	cleanCmdline := strings.ReplaceAll(cmdlineForEfi, " ", "_")
+	name := constants.ArtifactBaseName + "_" + cleanCmdline
 	// If the cmdline is empty, we remove the underscore as to not get a dangling one
 	finalName := strings.TrimSuffix(name, "_")
 	return finalName

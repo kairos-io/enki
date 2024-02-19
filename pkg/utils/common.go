@@ -4,6 +4,12 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+
 	containerdCompression "github.com/containerd/containerd/archive/compression"
 	"github.com/google/go-containerregistry/pkg/name"
 	container "github.com/google/go-containerregistry/pkg/v1"
@@ -13,11 +19,6 @@ import (
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/viper"
-	"io"
-	"os"
-	"path/filepath"
-	"strings"
-	"time"
 )
 
 // CreateSquashFS creates a squash file at destination from a source, with options
