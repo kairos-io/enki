@@ -60,7 +60,7 @@ func GetUkiCmdline() []string {
 	cmdlineOverride := viper.GetStringSlice("cmdline")
 	if len(cmdlineOverride) == 0 {
 		// For no extra cmdline, we default to install mode
-		return []string{constants.UkiCmdlineInstall + " " + constants.UkiCmdline}
+		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}
 	} else {
 		// For extra cmdline, we default to install mode + extra cmdlines
 		cmdline := []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}
