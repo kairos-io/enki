@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/kairos-io/enki/pkg/action"
@@ -43,18 +44,46 @@ func NewBuildUKICmd() *cobra.Command {
 				return fmt.Errorf("invalid output type: %s", artifact)
 			}
 
-			overlay, _ := cmd.Flags().GetString("overlay")
-			if overlay != "" {
+			overlayRootfs, _ := cmd.Flags().GetString("overlay-rootfs")
+			if overlayRootfs != "" {
 				// Check if overlay dir exists by doing an os.stat
 				// If it does not exist, return an error
-				ol, err := os.Stat(overlay)
+				ol, err := os.Stat(overlayRootfs)
 				if err != nil {
-					return fmt.Errorf("overlay directory does not exist: %s", overlay)
+					return fmt.Errorf("overlay-rootfs directory does not exist: %s", overlayRootfs)
 				}
 				if !ol.IsDir() {
-					return fmt.Errorf("overlay is not a directory: %s", overlay)
+					return fmt.Errorf("overlay-rootfs is not a directory: %s", overlayRootfs)
 				}
 
+				// Transform it into absolute path
+				absolutePath, err := filepath.Abs(overlayRootfs)
+				if err != nil {
+					viper.Set("overlay-rootfs", absolutePath)
+				}
+			}
+			overlayIso, _ := cmd.Flags().GetString("overlay-iso")
+			if overlayIso != "" {
+				// Check if overlay dir exists by doing an os.stat
+				// If it does not exist, return an error
+				ol, err := os.Stat(overlayIso)
+				if err != nil {
+					return fmt.Errorf("overlay directory does not exist: %s", overlayIso)
+				}
+				if !ol.IsDir() {
+					return fmt.Errorf("overlay is not a directory: %s", overlayIso)
+				}
+
+				// Check if we are setting a different artifact and overlay-iso is set
+				if artifact != string(constants.IsoOutput) {
+					return fmt.Errorf("overlay-iso is only supported for iso artifacts")
+				}
+
+				// Transform it into absolute path
+				absolutePath, err := filepath.Abs(overlayIso)
+				if err != nil {
+					viper.Set("overlay-iso", absolutePath)
+				}
 			}
 
 			return CheckRoot()
@@ -97,7 +126,8 @@ func NewBuildUKICmd() *cobra.Command {
 
 	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
 	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
-	c.Flags().StringP("overlay", "o", "", "Dir with files to be applied to the image.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
+	c.Flags().StringP("overlay-rootfs", "o", "", "Dir with files to be applied to the system rootfs.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
+	c.Flags().StringP("overlay-iso", "i", "", "Dir with files to be copied to the Iso rootfs.")
 	c.Flags().StringP("boot-branding", "", "Kairos", "Boot title branding")
 	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")

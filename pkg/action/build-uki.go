@@ -62,7 +62,7 @@ func (b *BuildUKIAction) Run() error {
 	}
 	defer os.RemoveAll(sourceDir)
 
-	if viper.GetString("overlay") != "" {
+	if viper.GetString("overlay-rootfs") != "" {
 		b.logger.Infof("Adding files from %s to rootfs", viper.GetString("overlay"))
 		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay")))
 		if err != nil {
@@ -520,6 +520,22 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	b.logger.Info("Copying files in the img file")
 	if err := copyFilesToImg(imgFile, filesMap); err != nil {
 		return err
+	}
+
+	if viper.GetString("overlay-iso") != "" {
+		b.logger.Infof("Adding files from %s to iso", viper.GetString("overlay-iso"))
+		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay-iso")))
+		if err != nil {
+			b.logger.Errorf("error creating overlay image: %s", err)
+			return err
+		}
+		_, err = b.e.DumpSource(isoDir, overlay)
+
+		if err != nil {
+			b.logger.Errorf("error copying overlay image: %s", err)
+			return err
+		}
+
 	}
 
 	isoName := fmt.Sprintf("kairos_%s.iso", b.version)
