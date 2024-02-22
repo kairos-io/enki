@@ -441,11 +441,36 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 		"--output", filepath.Join(sourceDir, outputEfi),
 		systemdBoot,
 	)
-
+	b.logger.Info("Signing the systemd-boot file")
+	b.logger.Debugf("Running: %s", cmd.String())
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("running sbsign: %w\n%s", err, string(out))
 	}
+
+	// Now sign the ext2 driver
+	if utils.IsAmd64(b.arch) {
+		cmd = exec.Command("sbsign",
+			"--key", filepath.Join(b.keysDirectory, "DB.key"),
+			"--cert", filepath.Join(b.keysDirectory, "DB.pem"),
+			"--output", filepath.Join(sourceDir, "ext2_x64.efi"),
+			constants.UkiSystemdExtDriverx68,
+		)
+	} else if utils.IsArm64(b.arch) {
+		cmd = exec.Command("sbsign",
+			"--key", filepath.Join(b.keysDirectory, "DB.key"),
+			"--cert", filepath.Join(b.keysDirectory, "DB.pem"),
+			"--output", filepath.Join(sourceDir, "ext2_aa64.efi"),
+			constants.UkiSystemdExtDriverArm,
+		)
+	}
+	b.logger.Info("Signing the ext2 driver")
+	b.logger.Debugf("Running: %s", cmd.String())
+	out, err = cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("running sbsign: %w\n%s", err, string(out))
+	}
+
 	return nil
 }
 
@@ -630,13 +655,15 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	// the keys are the target dirs
 	// the values are the source files that should be copied into the target dir
 	data := map[string][]string{
-		"EFI":            {},
-		"EFI/BOOT":       {filepath.Join(sourceDir, "BOOTX64.EFI")},
-		"EFI/kairos":     {},
-		"EFI/tools":      {},
-		"loader":         {filepath.Join(sourceDir, "loader.conf")},
-		"loader/entries": {},
-		"loader/keys":    {},
+		"EFI":                 {},
+		"EFI/BOOT":            {filepath.Join(sourceDir, "BOOTX64.EFI")},
+		"EFI/systemd":         {},
+		"EFI/systemd/drivers": {filepath.Join(sourceDir, "ext2_x64.efi")},
+		"EFI/kairos":          {},
+		"EFI/tools":           {},
+		"loader":              {filepath.Join(sourceDir, "loader.conf")},
+		"loader/entries":      {},
+		"loader/keys":         {},
 		"loader/keys/auto": {
 			filepath.Join(b.keysDirectory, "PK.der"),
 			filepath.Join(b.keysDirectory, "KEK.der"),
@@ -692,11 +719,13 @@ func (b *BuildUKIAction) getEfiNeededFiles() ([]string, error) {
 		return []string{
 			constants.UkiSystemdBootStubx86,
 			constants.UkiSystemdBootx86,
+			constants.UkiSystemdExtDriverx68,
 		}, nil
 	} else if utils.IsArm64(b.arch) {
 		return []string{
 			constants.UkiSystemdBootStubArm,
 			constants.UkiSystemdBootArm,
+			constants.UkiSystemdExtDriverArm,
 		}, nil
 	} else {
 		return nil, fmt.Errorf("unsupported arch: %s", b.arch)
