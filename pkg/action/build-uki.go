@@ -4,7 +4,11 @@ import (
 	"compress/gzip"
 	"fmt"
 	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/klauspost/compress/zstd"
+	"github.com/sanity-io/litter"
 	"github.com/spf13/viper"
+	"github.com/u-root/u-root/pkg/cpio"
+	"golang.org/x/exp/maps"
 	"io"
 	"math"
 	"os"
@@ -13,10 +17,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-
-	"github.com/sanity-io/litter"
-	"github.com/u-root/u-root/pkg/cpio"
-	"golang.org/x/exp/maps"
 
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
@@ -88,6 +88,14 @@ func (b *BuildUKIAction) Run() error {
 	if err := b.setupDirectoriesAndFiles(sourceDir); err != nil {
 		return err
 	}
+
+	b.logger.Info("Copying kernel")
+	if err := b.copyKernel(sourceDir); err != nil {
+		return err
+	}
+
+	b.logger.Info("Cleaning up the source directory")
+	b.cleanSource(sourceDir)
 
 	b.logger.Info("Creating an initramfs file")
 	if err := b.createInitramfs(sourceDir); err != nil {
@@ -313,7 +321,7 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 		return fmt.Errorf("error writing trailer record: %w", err)
 	}
 
-	if err := GzipFile(cpioFileName, "initrd"); err != nil {
+	if err := ZstdFile(cpioFileName, "initrd"); err != nil {
 		return err
 	}
 
@@ -322,33 +330,6 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 	}
 
 	return nil
-}
-
-func (b *BuildUKIAction) uname(sourceDir string) (string, error) {
-	files, err := filepath.Glob(filepath.Join(sourceDir, "boot", "vmlinuz-*"))
-	if err != nil {
-		return "", fmt.Errorf("getting file list: %w", err)
-	}
-
-	matchingFile := ""
-	for _, file := range files {
-		if !strings.Contains(file, "rescue") {
-			matchingFile = file
-			break
-		}
-	}
-	if matchingFile == "" {
-		return "", fmt.Errorf("no matching vmlinuz file found")
-	}
-
-	// Extract the basename and remove "vmlinuz-" using a regular expression
-	re := regexp.MustCompile(`vmlinuz-(.+)`)
-	match := re.FindStringSubmatch(filepath.Base(matchingFile))
-	if len(match) <= 1 {
-		return "", fmt.Errorf("error extracting uname")
-	}
-
-	return match[1], nil
 }
 
 func (b *BuildUKIAction) copyKernel(sourceDir string) error {
@@ -369,7 +350,7 @@ func (b *BuildUKIAction) copyKernel(sourceDir string) error {
 		return err
 	}
 	defer destinationFile.Close()
-
+	b.logger.Infof("Copying kernel from: %s to: %s", sourceFile.Name(), destinationFile.Name())
 	_, err = io.Copy(destinationFile, sourceFile)
 
 	return err
@@ -379,15 +360,6 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	// Normally that's still the current dir but just making sure.
 	if err := os.Chdir(sourceDir); err != nil {
 		return fmt.Errorf("changing to %s directory: %w", sourceDir, err)
-	}
-
-	uname, err := b.uname(sourceDir)
-	if err != nil {
-		return err
-	}
-
-	if err := b.copyKernel(sourceDir); err != nil {
-		return err
 	}
 
 	finalEfiName := nameFromCmdline(cmdline) + ".efi"
@@ -403,7 +375,6 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 		"--initrd", "initrd",
 		"--cmdline", cmdline,
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
-		"--uname", uname,
 		"--stub", stubFile,
 		"--secureboot-private-key", filepath.Join(b.keysDirectory, "DB.key"),
 		"--secureboot-certificate", filepath.Join(b.keysDirectory, "DB.pem"),
@@ -417,6 +388,7 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	if err != nil {
 		return fmt.Errorf("running ukify: %w\n%s", err, string(out))
 	}
+	b.logger.Debugf("ukify output: %s", string(out))
 	return nil
 }
 
@@ -703,6 +675,15 @@ func (b *BuildUKIAction) getEfiNeededFiles() ([]string, error) {
 	}
 }
 
+func (b *BuildUKIAction) cleanSource(dir string) {
+	// Remove the boot directory as we already copied the kernel and we dont need the initrd files
+	err := os.RemoveAll(filepath.Join(dir, "boot"))
+	if err != nil {
+		b.logger.Errorf("removing boot dir: %s", err)
+		return
+	}
+}
+
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
 	for dir, files := range filesMap {
 		for _, f := range files {
@@ -734,6 +715,32 @@ func GzipFile(sourcePath, targetPath string) error {
 	defer gzipWriter.Close()
 
 	if _, err = io.Copy(gzipWriter, inputFile); err != nil {
+		return fmt.Errorf("error writing data to the compress initramfs file: %w", err)
+	}
+
+	return nil
+}
+
+func ZstdFile(sourcePath, targetPath string) error {
+	inputFile, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("error opening initramfs file: %w", err)
+	}
+	defer inputFile.Close()
+
+	outputFile, err := os.Create(targetPath)
+	if err != nil {
+		return fmt.Errorf("error creating compressed initramfs file: %w", err)
+	}
+	defer outputFile.Close()
+
+	// SpeedBetterCompression is heavier, takes 36 seconds in my 24core cpu but generates a 919MB file
+	// SpeedBestCompression is really fast, takes 6 seconds but generates a 950Mb file
+	// If we need we can use the heavier one if we need to gain those 30 extra Mb
+	zstdWriter, _ := zstd.NewWriter(outputFile, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+	defer zstdWriter.Close()
+
+	if _, err = io.Copy(zstdWriter, inputFile); err != nil {
 		return fmt.Errorf("error writing data to the compress initramfs file: %w", err)
 	}
 
