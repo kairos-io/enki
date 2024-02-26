@@ -54,8 +54,17 @@ func (b *BuildUKIAction) Run() error {
 	if err != nil {
 		return err
 	}
-
+	// artifactsTempDir Is where we copy the kernel and initramfs files
+	// So only artifacts that are needed to build the efi, so we dont pollute the sourceDir
+	artifactsTempDir, err := os.MkdirTemp("", "enki-build-uki-artifacts-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(artifactsTempDir)
 	b.logger.Info("Extracting image to a temporary directory")
+	// Source dir is the directory where we extract the image
+	// It should only contain the image files and whatever changes we add or remove like creating dir or removing leftover
+	// lets not pollute it
 	sourceDir, err := b.extractImage()
 	if err != nil {
 		return err
@@ -90,7 +99,7 @@ func (b *BuildUKIAction) Run() error {
 	}
 
 	b.logger.Info("Copying kernel")
-	if err := b.copyKernel(sourceDir); err != nil {
+	if err := b.copyKernel(sourceDir, artifactsTempDir); err != nil {
 		return err
 	}
 
@@ -98,14 +107,14 @@ func (b *BuildUKIAction) Run() error {
 	b.cleanSource(sourceDir)
 
 	b.logger.Info("Creating an initramfs file")
-	if err := b.createInitramfs(sourceDir); err != nil {
+	if err := b.createInitramfs(sourceDir, artifactsTempDir); err != nil {
 		return err
 	}
 
 	cmdlines := utils.GetUkiCmdline()
 	for _, cmdline := range cmdlines {
 		b.logger.Info("Running ukify for cmdline: " + cmdline)
-		if err := b.ukify(sourceDir, cmdline); err != nil {
+		if err := b.ukify(sourceDir, artifactsTempDir, cmdline); err != nil {
 			return err
 		}
 		b.logger.Info("Creating kairos and loader conf files")
@@ -256,14 +265,14 @@ func (b *BuildUKIAction) setupDirectoriesAndFiles(tmpDir string) error {
 
 // createInitramfs creates a compressed initramfs file (cpio format, gzipped).
 // The resulting file is named "initrd" and is saved inthe sourceDir.
-func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
+func (b *BuildUKIAction) createInitramfs(sourceDir, artifactsTempDir string) error {
 	format := "newc"
 	archiver, err := cpio.Format(format)
 	if err != nil {
 		return fmt.Errorf("format %q not supported: %w", format, err)
 	}
 
-	cpioFileName := filepath.Join(sourceDir, "initramfs.cpio")
+	cpioFileName := filepath.Join(artifactsTempDir, "initramfs.cpio")
 	cpioFile, err := os.Create(cpioFileName)
 	if err != nil {
 		return fmt.Errorf("creating cpio file: %w", err)
@@ -321,7 +330,7 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 		return fmt.Errorf("error writing trailer record: %w", err)
 	}
 
-	if err := ZstdFile(cpioFileName, "initrd"); err != nil {
+	if err := ZstdFile(cpioFileName, filepath.Join(artifactsTempDir, "initrd")); err != nil {
 		return err
 	}
 
@@ -332,7 +341,7 @@ func (b *BuildUKIAction) createInitramfs(sourceDir string) error {
 	return nil
 }
 
-func (b *BuildUKIAction) copyKernel(sourceDir string) error {
+func (b *BuildUKIAction) copyKernel(sourceDir, targetDir string) error {
 	linkTarget, err := os.Readlink(filepath.Join(sourceDir, "boot", "vmlinuz"))
 	if err != nil {
 		return err
@@ -345,7 +354,7 @@ func (b *BuildUKIAction) copyKernel(sourceDir string) error {
 	}
 	defer sourceFile.Close()
 
-	destinationFile, err := os.Create(filepath.Join(sourceDir, "vmlinuz"))
+	destinationFile, err := os.Create(filepath.Join(targetDir, "vmlinuz"))
 	if err != nil {
 		return err
 	}
@@ -356,7 +365,7 @@ func (b *BuildUKIAction) copyKernel(sourceDir string) error {
 	return err
 }
 
-func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
+func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline string) error {
 	// Normally that's still the current dir but just making sure.
 	if err := os.Chdir(sourceDir); err != nil {
 		return fmt.Errorf("changing to %s directory: %w", sourceDir, err)
@@ -371,8 +380,8 @@ func (b *BuildUKIAction) ukify(sourceDir, cmdline string) error {
 	}
 
 	cmd := exec.Command("/usr/lib/systemd/ukify",
-		"--linux", "vmlinuz",
-		"--initrd", "initrd",
+		"--linux", filepath.Join(artifactsTempDir, "vmlinuz"),
+		"--initrd", filepath.Join(artifactsTempDir, "initrd"),
 		"--cmdline", cmdline,
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
 		"--stub", stubFile,
