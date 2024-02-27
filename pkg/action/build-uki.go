@@ -72,8 +72,8 @@ func (b *BuildUKIAction) Run() error {
 	defer os.RemoveAll(sourceDir)
 
 	if viper.GetString("overlay-rootfs") != "" {
-		b.logger.Infof("Adding files from %s to rootfs", viper.GetString("overlay"))
-		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay")))
+		b.logger.Infof("Adding files from %s to rootfs", viper.GetString("overlay-rootfs"))
+		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay-rootfs")))
 		if err != nil {
 			b.logger.Errorf("error creating overlay image: %s", err)
 			return err
