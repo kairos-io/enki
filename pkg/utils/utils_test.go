@@ -186,19 +186,24 @@ var _ = Describe("Utils", Label("utils"), func() {
 			Expect(cmdline[0]).To(Equal(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
 		})
 		It("returns the default cmdline with the cmdline flag and install-mode", func() {
-			viper.Set("cmdline", []string{"key=value testkey"})
+			viper.Set("extra-cmdline", []string{"key=value testkey"})
 			cmdline := utils.GetUkiCmdline()
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
 		})
 		It("returns more than one cmdline with the cmdline flag if specified multiple values", func() {
-			viper.Set("cmdline", []string{"key=value testkey", "another=value anotherkey"})
+			viper.Set("extra-cmdline", []string{"key=value testkey", "another=value anotherkey"})
 			cmdline := utils.GetUkiCmdline()
 			// Should contain the default one
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
 			// Also the extra ones, without the install-mode
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
 			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " another=value anotherkey"))
+		})
+		It("expands the default cmdline if extended-cmdline is used", func() {
+			viper.Set("extend-cmdline", "key=value testkey")
+			cmdline := utils.GetUkiCmdline()
+			Expect(cmdline).To(ContainElement(constants.UkiCmdline + " " + constants.UkiCmdlineInstall + " key=value testkey"))
 		})
 	})
 })

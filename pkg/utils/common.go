@@ -56,8 +56,17 @@ func GolangArchToArch(arch string) (string, error) {
 // GetUkiCmdline returns the cmdline to be used for the kernel.
 // The cmdline can be overridden by the user using the cmdline flag.
 // For each cmdline passed, we generate a uki file with that cmdline
+// extend-cmdline will just extend the default cmdline so we only create one efi file
+// extra-cmdline will create a new efi file for each cmdline passed
 func GetUkiCmdline() []string {
-	cmdlineOverride := viper.GetStringSlice("cmdline")
+	// Extend only
+	cmdlineExtend := viper.GetString("extend-cmdline")
+	if cmdlineExtend != "" {
+		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall + " " + cmdlineExtend}
+	}
+
+	// extra
+	cmdlineOverride := viper.GetStringSlice("extra-cmdline")
 	if len(cmdlineOverride) == 0 {
 		// For no extra cmdline, we default to install mode
 		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}

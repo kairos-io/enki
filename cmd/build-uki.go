@@ -129,10 +129,13 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().StringP("overlay-rootfs", "o", "", "Dir with files to be applied to the system rootfs.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
 	c.Flags().StringP("overlay-iso", "i", "", "Dir with files to be copied to the Iso rootfs.")
 	c.Flags().StringP("boot-branding", "", "Kairos", "Boot title branding")
-	c.Flags().StringSliceP("cmdline", "c", []string{}, "Command line to ")
+	c.Flags().StringSliceP("extra-cmdline", "c", []string{}, "Add extra efi files with this cmdline. This creates a base efi with the default cmdline and extra efi files with the default+provided cmdline.")
+	c.Flags().StringP("extend-cmdline", "x", "", "Extend the default cmdline with this parameters. This creates a single efi entry with the default+provided cmdline.")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
 	c.MarkFlagRequired("keys")
+	// Mark some flags as mutually exclusive
+	c.MarkFlagsMutuallyExclusive([]string{"extra-cmdline", "extend-cmdline"}...)
 	return c
 }
 
