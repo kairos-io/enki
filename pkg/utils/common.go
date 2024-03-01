@@ -62,7 +62,7 @@ func GetUkiCmdline() []string {
 	// Extend only
 	cmdlineExtend := viper.GetString("extend-cmdline")
 	if cmdlineExtend != "" {
-		return []string{constants.UkiCmdline + " " + cmdlineExtend}
+		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall + " " + cmdlineExtend}
 	}
 
 	// extra
