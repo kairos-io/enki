@@ -452,28 +452,21 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 
-	bootBranding := viper.GetString("boot-branding")
-	bootBrandingVersion := viper.GetBool("boot-branding-version")
-	bootBrandingCmdline := viper.GetBool("boot-branding-cmdline")
+	title := viper.GetString("boot-branding")
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
 
-	var title string
+	configData := fmt.Sprintf("title %s\nefi /EFI/kairos/%s.efi\n", title, finalEfiName)
 
-	if bootBranding != "" {
-		title = bootBranding
+	if viper.GetBool("include-version-in-config") {
+		configData = fmt.Sprintf("%sversion %s\n", configData, b.version)
 	}
 
-	if bootBrandingVersion {
-		title = fmt.Sprintf("%s %s", title, b.version)
+	if viper.GetBool("include-cmdline-in-config") {
+		configData = fmt.Sprintf("%scmdline %s\n", configData, strings.Trim(cmdline, " "))
 	}
 
-	if bootBrandingCmdline {
-		title = fmt.Sprintf("%s %s", title, cmdlineForConf)
-	}
-
-	data := fmt.Sprintf("title %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", title, finalEfiName, b.version, strings.Trim(cmdline, " "))
-	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
+	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(configData), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
 	}
