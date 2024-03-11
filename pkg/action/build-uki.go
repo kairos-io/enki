@@ -432,8 +432,6 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
-	// This is for the UI only, what it shows on the menu to select
-	var cmdlineForConf string
 	// This is stored in the config
 	var extraCmdline string
 	finalEfiName := nameFromCmdline(cmdline)
@@ -442,13 +440,6 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	// For the default install entry, do not add anything on the config
 	if extraCmdline == constants.UkiCmdlineInstall {
 		extraCmdline = ""
-	}
-	// Add some  ( ) around the extra cmdline if it's not empty for a nicer display
-	if extraCmdline != "" {
-		cmdlineForConf = fmt.Sprintf("(%s)", strings.Trim(extraCmdline, " "))
-	} else {
-		// Empty extra cmdline, we don't want to display anything
-		cmdlineForConf = extraCmdline
 	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 
@@ -463,7 +454,7 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	}
 
 	if viper.GetBool("include-cmdline-in-config") {
-		configData = fmt.Sprintf("%scmdline %s\n", configData, strings.Trim(cmdline, " "))
+		configData = fmt.Sprintf("%scmdline %s\n", configData, strings.Trim(extraCmdline, " "))
 	}
 
 	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(configData), os.ModePerm)
