@@ -3,12 +3,6 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/kairos-io/enki/pkg/constants"
-	"github.com/klauspost/compress/zstd"
-	"github.com/sanity-io/litter"
-	"github.com/spf13/viper"
-	"github.com/u-root/u-root/pkg/cpio"
-	"golang.org/x/exp/maps"
 	"io"
 	"math"
 	"os"
@@ -17,6 +11,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/klauspost/compress/zstd"
+	"github.com/sanity-io/litter"
+	"github.com/spf13/viper"
+	"github.com/u-root/u-root/pkg/cpio"
+	"golang.org/x/exp/maps"
 
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
@@ -451,10 +452,27 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 
-	title := viper.GetString("boot-branding")
+	bootBranding := viper.GetString("boot-branding")
+	bootBrandingVersion := viper.GetBool("boot-branding-version")
+	bootBrandingCmdline := viper.GetBool("boot-branding-cmdline")
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
-	data := fmt.Sprintf("title %s %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", title, b.version, cmdlineForConf, finalEfiName, b.version, strings.Trim(cmdline, " "))
+
+	var title string
+
+	if bootBranding != "" {
+		title = bootBranding
+	}
+
+	if bootBrandingVersion {
+		title = fmt.Sprintf("%s %s", title, b.version)
+	}
+
+	if bootBrandingCmdline {
+		title = fmt.Sprintf("%s %s", title, cmdlineForConf)
+	}
+
+	data := fmt.Sprintf("title %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", title, finalEfiName, b.version, strings.Trim(cmdline, " "))
 	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
