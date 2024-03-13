@@ -129,6 +129,8 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().StringP("overlay-rootfs", "o", "", "Dir with files to be applied to the system rootfs.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
 	c.Flags().StringP("overlay-iso", "i", "", "Dir with files to be copied to the Iso rootfs.")
 	c.Flags().StringP("boot-branding", "", "Kairos", "Boot title branding")
+	c.Flags().BoolP("include-version-in-config", "", false, "Include the OS version in the .config file")
+	c.Flags().BoolP("include-cmdline-in-config", "", false, "Include the cmdline in the .config file. Only the extra values are included.")
 	c.Flags().StringSliceP("extra-cmdline", "c", []string{}, "Add extra efi files with this cmdline. This creates a base efi with the default cmdline and extra efi files with the default+provided cmdline.")
 	c.Flags().StringP("extend-cmdline", "x", "", "Extend the default cmdline with this parameters. This creates a single efi entry with the default+provided cmdline.")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")

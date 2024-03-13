@@ -3,12 +3,6 @@ package action
 import (
 	"compress/gzip"
 	"fmt"
-	"github.com/kairos-io/enki/pkg/constants"
-	"github.com/klauspost/compress/zstd"
-	"github.com/sanity-io/litter"
-	"github.com/spf13/viper"
-	"github.com/u-root/u-root/pkg/cpio"
-	"golang.org/x/exp/maps"
 	"io"
 	"math"
 	"os"
@@ -17,6 +11,13 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/klauspost/compress/zstd"
+	"github.com/sanity-io/litter"
+	"github.com/spf13/viper"
+	"github.com/u-root/u-root/pkg/cpio"
+	"golang.org/x/exp/maps"
 
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
@@ -431,8 +432,6 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
-	// This is for the UI only, what it shows on the menu to select
-	var cmdlineForConf string
 	// This is stored in the config
 	var extraCmdline string
 	finalEfiName := nameFromCmdline(cmdline)
@@ -442,20 +441,23 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	if extraCmdline == constants.UkiCmdlineInstall {
 		extraCmdline = ""
 	}
-	// Add some  ( ) around the extra cmdline if it's not empty for a nicer display
-	if extraCmdline != "" {
-		cmdlineForConf = fmt.Sprintf("(%s)", strings.Trim(extraCmdline, " "))
-	} else {
-		// Empty extra cmdline, we don't want to display anything
-		cmdlineForConf = extraCmdline
-	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 
 	title := viper.GetString("boot-branding")
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
-	data := fmt.Sprintf("title %s %s %s\nefi /EFI/kairos/%s.efi\nversion %s\ncmdline %s\n", title, b.version, cmdlineForConf, finalEfiName, b.version, strings.Trim(cmdline, " "))
-	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(data), os.ModePerm)
+
+	configData := fmt.Sprintf("title %s\nefi /EFI/kairos/%s.efi\n", title, finalEfiName)
+
+	if viper.GetBool("include-version-in-config") {
+		configData = fmt.Sprintf("%sversion %s\n", configData, b.version)
+	}
+
+	if viper.GetBool("include-cmdline-in-config") {
+		configData = fmt.Sprintf("%scmdline %s\n", configData, strings.Trim(extraCmdline, " "))
+	}
+
+	err := os.WriteFile(filepath.Join(sourceDir, finalEfiName+".conf"), []byte(configData), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the %s.conf file", finalEfiName)
 	}
