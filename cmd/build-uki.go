@@ -138,6 +138,7 @@ func NewBuildUKICmd() *cobra.Command {
 	c.MarkFlagRequired("keys")
 	// Mark some flags as mutually exclusive
 	c.MarkFlagsMutuallyExclusive([]string{"extra-cmdline", "extend-cmdline"}...)
+	viper.BindPFlags(c.Flags())
 	return c
 }
 
