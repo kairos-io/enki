@@ -444,9 +444,6 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 
 	title := viper.GetString("boot-branding")
-	if title == "" {
-		title = "Kairos"
-	}
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
 
