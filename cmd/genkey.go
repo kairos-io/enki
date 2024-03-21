@@ -6,10 +6,15 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/gofrs/uuid"
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+
+	"github.com/foxboron/go-uefi/efi/signature"
+	efiutil "github.com/foxboron/go-uefi/efi/util"
+	"github.com/foxboron/sbctl"
+	"github.com/foxboron/sbctl/certs"
+	"github.com/foxboron/sbctl/fs"
 )
 
 func NewGenkeyCmd() *cobra.Command {
@@ -20,7 +25,7 @@ func NewGenkeyCmd() *cobra.Command {
 		RunE: func(cobraCmd *cobra.Command, args []string) error {
 			// Set this after parsing of the flags, so it fails on parsing and prints usage properly
 			cobraCmd.SilenceUsage = true
-			cobraCmd.SilenceErrors = true // Do not propagate errors down the line, we control them
+			//cobraCmd.SilenceErrors = true // Do not propagate errors down the line, we control them
 
 			cfg, err := config.ReadConfigBuild(viper.GetString("config-dir"), cobraCmd.Flags())
 			if err != nil {
@@ -28,7 +33,12 @@ func NewGenkeyCmd() *cobra.Command {
 			}
 			l := cfg.Logger
 			name := args[0]
-			uid := uuid.NewV5(uuid.NamespaceDNS, name)
+
+			uuid := sbctl.CreateUUID()
+			if err != nil {
+				return err
+			}
+			guid := efiutil.StringToGUID(string(uuid))
 			output, _ := cobraCmd.Flags().GetString("output")
 
 			err = os.MkdirAll(output, 0700)
@@ -37,13 +47,14 @@ func NewGenkeyCmd() *cobra.Command {
 				return err
 			}
 
-			for _, keyType := range []string{"PK", "KEK", "DB"} {
+			for _, keyType := range []string{"PK", "KEK", "db"} {
 				l.Infof("Generating %s", keyType)
 				key := filepath.Join(output, fmt.Sprintf("%s.key", keyType))
 				pem := filepath.Join(output, fmt.Sprintf("%s.pem", keyType))
 				der := filepath.Join(output, fmt.Sprintf("%s.der", keyType))
-				auth := filepath.Join(output, fmt.Sprintf("%s.auth", keyType))
-				esl := filepath.Join(output, fmt.Sprintf("%s.esl", keyType))
+				//auth := filepath.Join(output, fmt.Sprintf("%s.auth", keyType))
+				//esl := filepath.Join(output, fmt.Sprintf("%s.esl", keyType))
+
 				args := []string{
 					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s/", name),
 					"-keyout", key,
@@ -60,10 +71,55 @@ func NewGenkeyCmd() *cobra.Command {
 				}
 				l.Infof("%s generated at %s and %s", keyType, key, pem)
 
+				// if keyType == "DB" {
+				// 	l.Infof("Appending the Microsoft DB cert")
+				// 	for _, f := range []string{"microsoft-keys/db/MicCorUEFCA2011_2011-06-27.pem", "microsoft-keys/db/MicWinProPCA2011_2011-10-19.pem"} {
+				// 		// Append the Microsoft one
+				// 		msCert, err := os.ReadFile(f)
+				// 		if err != nil {
+				// 			l.Errorf("Error reading Microsoft DB certificate: %s", err)
+				// 			return err
+				// 		}
+				// 		f, err := os.OpenFile(pem, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+				// 		if err != nil {
+				// 			l.Errorf("Error opening the pem file to append: %s", err)
+				// 			return err
+				// 		}
+				// 		defer f.Close()
+
+				// 		if _, err = f.Write(msCert); err != nil {
+				// 			l.Errorf("Error writing to the pem file: %s", err)
+				// 			return err
+				// 		}
+				// 	}
+				// }
+
+				// if keyType == "KEK" {
+				// 	l.Infof("Appending the Microsoft DB cert")
+				// 	// Append the Microsoft one
+				// 	msCert, err := os.ReadFile("microsoft-keys/KEK/MicCorKEKCA2011_2011-06-24.pem")
+				// 	if err != nil {
+				// 		l.Errorf("Error reading Microsoft KEK certificate: %s", err)
+				// 		return err
+				// 	}
+				// 	f, err := os.OpenFile(pem, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+				// 	if err != nil {
+				// 		l.Errorf("Error opening the pem file to append: %s", err)
+				// 		return err
+				// 	}
+				// 	defer f.Close()
+
+				// 	if _, err = f.Write(msCert); err != nil {
+				// 		l.Errorf("Error writing to the pem file: %s", err)
+				// 		return err
+				// 	}
+				// }
+
 				l.Infof("Converting %s.pem to DER", keyType)
 				cmd = exec.Command(
 					"openssl", "x509", "-outform", "DER", "-in", pem, "-out", der,
 				)
+
 				out, err = cmd.CombinedOutput()
 				if err != nil {
 					l.Errorf("Error generating %s: %s", keyType, string(out))
@@ -71,41 +127,48 @@ func NewGenkeyCmd() *cobra.Command {
 				}
 				l.Infof("%s generated at %s", keyType, der)
 
-				l.Infof("Generating %s.esl", keyType)
-				cmd = exec.Command(
-					"sbsiglist", "--owner", uid.String(), "--type", "x509", "--output", esl, der,
-				)
-				out, err = cmd.CombinedOutput()
-				if err != nil {
-					l.Errorf("Error generating %s: %s\n%s", keyType, string(out), err.Error())
-					return err
-				}
-				l.Infof("%s generated at %s", keyType, esl)
+				// l.Infof("Generating %s.esl", keyType)
+				// cmd = exec.Command(
+				// 	"sbsiglist", "--owner", uuid.String(), "--type", "x509", "--output", esl, der,
+				// )
+				// out, err = cmd.CombinedOutput()
+				// if err != nil {
+				// 	l.Errorf("Error generating %s: %s\n%s", keyType, string(out), err.Error())
+				// 	return err
+				// }
+				// l.Infof("%s generated at %s", keyType, esl)
 
-				// For PK and KEK we use PK.key and PK.pem to sign it
-				// For DB we use KEK.key and KEK.pem to sign it
-				var signKey string
-				if keyType == "PK" || keyType == "KEK" {
-					signKey = filepath.Join(output, "PK")
-				} else {
-					signKey = filepath.Join(output, "KEK")
-				}
-				l.Infof("Signing %s with %s", keyType, signKey)
-				cmd = exec.Command(
-					"sbvarsign",
-					"--attr", "NON_VOLATILE,RUNTIME_ACCESS,BOOTSERVICE_ACCESS,TIME_BASED_AUTHENTICATED_WRITE_ACCESS",
-					"--key", fmt.Sprintf("%s.key", signKey),
-					"--cert", fmt.Sprintf("%s.pem", signKey),
-					"--output", auth,
-					fmt.Sprintf("%s", keyType),
-					esl,
-				)
-				out, err = cmd.CombinedOutput()
+				// // For PK and KEK we use PK.key and PK.pem to sign it
+				// // For DB we use KEK.key and KEK.pem to sign it
+				// var signKey string
+				// if keyType == "PK" || keyType == "KEK" {
+				// 	signKey = filepath.Join(output, "PK")
+				// } else {
+				// 	signKey = filepath.Join(output, "KEK")
+				// }
+
+				err = generateAuthKeys(*guid, output, keyType)
 				if err != nil {
-					l.Errorf("Error generating %s: %s", keyType, string(out))
+					l.Errorf("Error generating auth keys: %s", err)
 					return err
 				}
-				l.Infof("%s generated at %s", keyType, auth)
+
+				// l.Infof("Signing %s with %s", keyType, signKey)
+				// cmd = exec.Command(
+				// 	"sbvarsign",
+				// 	"--attr", "NON_VOLATILE,RUNTIME_ACCESS,BOOTSERVICE_ACCESS,TIME_BASED_AUTHENTICATED_WRITE_ACCESS",
+				// 	"--key", fmt.Sprintf("%s.key", signKey),
+				// 	"--cert", fmt.Sprintf("%s.pem", signKey),
+				// 	"--output", auth,
+				// 	fmt.Sprintf("%s", keyType),
+				// 	esl,
+				// )
+				// out, err = cmd.CombinedOutput()
+				// if err != nil {
+				// 	l.Errorf("Error generating %s: %s", keyType, string(out))
+				// 	return err
+				// }
+				// l.Infof("%s generated at %s", keyType, auth)
 
 			}
 
@@ -132,4 +195,53 @@ func NewGenkeyCmd() *cobra.Command {
 
 func init() {
 	rootCmd.AddCommand(NewGenkeyCmd())
+}
+
+func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
+	// Prepare all the keys we need
+	key, err := fs.ReadFile(filepath.Join(keyPath, keyType+".key"))
+	if err != nil {
+		return fmt.Errorf("reading the key file %w", err)
+	}
+
+	pem, err := fs.ReadFile(filepath.Join(keyPath, keyType+".pem"))
+	if err != nil {
+		return fmt.Errorf("reading the pem file %w", err)
+	}
+
+	sigdb := signature.NewSignatureDatabase()
+
+	if err = sigdb.Append(signature.CERT_X509_GUID, guid, pem); err != nil {
+		return fmt.Errorf("appending signature %w", err)
+	}
+
+	if keyType != "PK" {
+		// Load microsoft certs
+		oemSigDb, err := certs.GetOEMCerts("microsoft", keyType)
+		if err != nil {
+			return fmt.Errorf("could not enroll db keys (type %s): %w", keyType, err)
+		}
+		sigdb.AppendDatabase(oemSigDb)
+
+		// customSigDb, err := certs.GetCustomCerts("custom", keyPath)
+		// if err != nil {
+		// 	return fmt.Errorf("could not enroll custom db keys (keyType %s): %w", keyType, err)
+		// }
+		// sigdb.AppendDatabase(customSigDb)
+	}
+
+	signedDB, err := sbctl.SignDatabase(sigdb, key, pem, keyType)
+	if err != nil {
+		return fmt.Errorf("creating the signed db: %w", err)
+	}
+
+	if err := fs.WriteFile(filepath.Join(keyPath, keyType+".auth"), signedDB, 0o644); err != nil {
+		return fmt.Errorf("writing the auth file: %w", err)
+	}
+
+	if err := fs.WriteFile(filepath.Join(keyPath, keyType+".esl"), sigdb.Bytes(), 0o644); err != nil {
+		return fmt.Errorf("writing the esl file: %w", err)
+	}
+
+	return nil
 }

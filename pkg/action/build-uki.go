@@ -386,8 +386,8 @@ func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline string) erro
 		"--cmdline", cmdline,
 		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
 		"--stub", stubFile,
-		"--secureboot-private-key", filepath.Join(b.keysDirectory, "DB.key"),
-		"--secureboot-certificate", filepath.Join(b.keysDirectory, "DB.pem"),
+		"--secureboot-private-key", filepath.Join(b.keysDirectory, "db.key"),
+		"--secureboot-certificate", filepath.Join(b.keysDirectory, "db.pem"),
 		"--pcr-private-key", filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
 		"--measure",
 		"--output", finalEfiName,
@@ -418,8 +418,8 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 	}
 
 	cmd := exec.Command("sbsign",
-		"--key", filepath.Join(b.keysDirectory, "DB.key"),
-		"--cert", filepath.Join(b.keysDirectory, "DB.pem"),
+		"--key", filepath.Join(b.keysDirectory, "db.key"),
+		"--cert", filepath.Join(b.keysDirectory, "db.pem"),
 		"--output", filepath.Join(sourceDir, outputEfi),
 		systemdBoot,
 	)
@@ -623,10 +623,10 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 		"loader/keys/auto": {
 			filepath.Join(b.keysDirectory, "PK.der"),
 			filepath.Join(b.keysDirectory, "KEK.der"),
-			filepath.Join(b.keysDirectory, "DB.der"),
+			filepath.Join(b.keysDirectory, "db.der"),
 			filepath.Join(b.keysDirectory, "PK.auth"),
 			filepath.Join(b.keysDirectory, "KEK.auth"),
-			filepath.Join(b.keysDirectory, "DB.auth")},
+			filepath.Join(b.keysDirectory, "db.auth")},
 	}
 	// Add the kairos efi files and the loader conf files for each cmdline
 	cmdlines := utils.GetUkiCmdline()
