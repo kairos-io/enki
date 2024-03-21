@@ -183,7 +183,7 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 		finalEfiConf = nameFromCmdline(constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
 	}
 	// Set that as default selection for booting
-	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\n", finalEfiConf)
+	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\nsecure-boot-enroll manual\n", finalEfiConf)
 	err := os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the loader.conf file: %s", err)
