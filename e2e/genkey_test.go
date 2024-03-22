@@ -61,9 +61,9 @@ func getDateFromString(dateString string) (int, int, int) {
 func expectExpirationIn(n int, resultDir string) {
 	By("checking the expiration")
 	cmd := exec.Command("openssl", "x509", "-enddate", "-noout",
-		"-in", filepath.Join(resultDir, "DB.pem"))
+		"-in", filepath.Join(resultDir, "db.pem"))
 	o, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred(), o)
 
 	dateStr := strings.TrimSpace(strings.TrimPrefix(string(o), "notAfter="))
 	certDay, certMonth, certYear := getDateFromString(dateStr)
