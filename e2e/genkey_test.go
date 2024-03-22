@@ -63,7 +63,7 @@ func expectExpirationIn(n int, resultDir string) {
 	cmd := exec.Command("openssl", "x509", "-enddate", "-noout",
 		"-in", filepath.Join(resultDir, "DB.pem"))
 	o, err := cmd.CombinedOutput()
-	Expect(err).ToNot(HaveOccurred())
+	Expect(err).ToNot(HaveOccurred(), o)
 
 	dateStr := strings.TrimSpace(strings.TrimPrefix(string(o), "notAfter="))
 	certDay, certMonth, certYear := getDateFromString(dateStr)
