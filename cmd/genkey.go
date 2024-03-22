@@ -17,6 +17,8 @@ import (
 	"github.com/foxboron/sbctl/fs"
 )
 
+const skipMicrosoftCerts = "skip-microsoft-certs-I-KNOW-WHAT-IM-DOING"
+
 func NewGenkeyCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "genkey NAME",
@@ -103,6 +105,7 @@ func NewGenkeyCmd() *cobra.Command {
 	}
 	c.Flags().StringP("output", "o", "keys/", "Output directory for the keys")
 	c.Flags().StringP("expiration-in-days", "e", "365", "In how many days from today should the certificates expire")
+	c.Flags().Bool(skipMicrosoftCerts, false, "When set to true, microsoft certs are not included in the KEK and db files. THIS COULD BRICK YOUR SYSTEM! (https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot#Enrolling_Option_ROM_digests). Only use this if you are sure your hardware doesn't need the microsoft certs!")
 
 	viper.BindPFlag("expiration-in-days", c.Flags().Lookup("expiration-in-days"))
 	return c
@@ -130,7 +133,7 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
 		return fmt.Errorf("appending signature %w", err)
 	}
 
-	if keyType != "PK" {
+	if keyType != "PK" && !viper.GetBool(skipMicrosoftCerts) {
 		// Load microsoft certs
 		oemSigDb, err := certs.GetOEMCerts("microsoft", keyType)
 		if err != nil {
