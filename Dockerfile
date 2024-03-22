@@ -45,6 +45,7 @@ ENTRYPOINT ["/enki"]
 FROM gcr.io/kaniko-project/executor:latest
 
 COPY --from=builder /enki /enki
+COPY microsoft /microsoft
 
 ENTRYPOINT ["/enki"]
 
