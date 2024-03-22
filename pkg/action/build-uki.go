@@ -406,7 +406,7 @@ func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline string) erro
 	if err != nil {
 		return fmt.Errorf("getting file info for %s: %w", finalEfiName, err)
 	}
-	if sizeLimit := viper.GetInt64("efi-size-warn"); fi.Size() > sizeLimit {
+	if sizeLimit := viper.GetInt64("efi-size-warn"); fi.Size() > sizeLimit*1024 {
 		b.logger.Warnf("EFI file %s is larger than %d bytes", finalEfiName, sizeLimit)
 	}
 
