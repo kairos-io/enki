@@ -134,7 +134,7 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
 		// Load microsoft certs
 		oemSigDb, err := certs.GetOEMCerts("microsoft", keyType)
 		if err != nil {
-			return fmt.Errorf("could not enroll db keys (type %s): %w", keyType, err)
+			return fmt.Errorf("failed to load microsoft keys (type %s): %w", keyType, err)
 		}
 		sigdb.AppendDatabase(oemSigDb)
 	}
