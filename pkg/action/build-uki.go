@@ -399,6 +399,8 @@ func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline string) erro
 		return fmt.Errorf("running ukify: %w\n%s", err, string(out))
 	}
 
+	b.logger.Debugf("ukify output: %s", string(out))
+
 	// check size of the efi file
 	fi, err := os.Stat(finalEfiName)
 	if err != nil {
@@ -408,7 +410,6 @@ func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline string) erro
 		b.logger.Warnf("EFI file %s is larger than %d bytes", finalEfiName, sizeLimit)
 	}
 
-	b.logger.Debugf("ukify output: %s", string(out))
 	return nil
 }
 
