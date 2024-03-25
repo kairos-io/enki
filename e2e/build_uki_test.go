@@ -26,6 +26,11 @@ var _ = Describe("build-uki", func() {
 		currentDir, err := os.Getwd()
 		Expect(err).ToNot(HaveOccurred())
 		keysDir = filepath.Join(currentDir, "assets", "keys")
+		Expect(os.MkdirAll(keysDir, 0755)).ToNot(HaveOccurred())
+		requiredFiles := []string{"db.der", "db.key", "db.auth", "KEK.der", "KEK.auth", "PK.der", "PK.auth", "tpm2-pcr-private.pem"}
+		for _, file := range requiredFiles {
+			Expect(os.WriteFile(filepath.Join(keysDir, file), []byte{}, 0755)).ToNot(HaveOccurred())
+		}
 
 		enki = NewEnki("enki-image", resultDir, keysDir)
 		image = fmt.Sprintf("quay.io/kairos/fedora:38-core-amd64-generic-%s", kairosVersion)
@@ -42,7 +47,7 @@ var _ = Describe("build-uki", func() {
 		})
 
 		It("returns an error about missing deps", func() {
-			out, err := enki.Run("build-uki", image, "--output-dir", resultDir, "-k", "assets/keys", "--output-type", "iso")
+			out, err := enki.Run("build-uki", image, "--output-dir", resultDir, "-k", keysDir, "--output-type", "iso")
 			Expect(err).To(HaveOccurred(), out)
 			Expect(out).To(Or(
 				MatchRegexp("executable file not found in \\$PATH"),
@@ -52,7 +57,11 @@ var _ = Describe("build-uki", func() {
 	})
 
 	It("successfully builds a uki iso from a container image", func() {
-		out, err := enki.Run("build-uki", image, "--output-dir", resultDir, "-k", keysDir, "--output-type", "iso")
+		out, err := enki.Run("genkey", "--output", keysDir, "TEST")
+		Expect(err).ToNot(HaveOccurred(), out)
+		fmt.Println(out)
+
+		out, err = enki.Run("build-uki", image, "--output-dir", resultDir, "-k", keysDir, "--output-type", "iso")
 		Expect(err).ToNot(HaveOccurred(), out)
 
 		By("building the iso")
