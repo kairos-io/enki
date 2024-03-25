@@ -135,6 +135,7 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().StringP("extend-cmdline", "x", "", "Extend the default cmdline with this parameters. This creates a single efi entry with the default+provided cmdline.")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
+	c.Flags().Int64P("efi-size-warn", "", 1024, "EFI file size warning threshold in megabytes. Default is 1024.")
 	c.MarkFlagRequired("keys")
 	// Mark some flags as mutually exclusive
 	c.MarkFlagsMutuallyExclusive([]string{"extra-cmdline", "extend-cmdline"}...)
