@@ -86,6 +86,20 @@ func NewBuildUKICmd() *cobra.Command {
 				}
 			}
 
+			// Check if the keys directory exists
+			keysDir, _ := cmd.Flags().GetString("keys")
+			_, err = os.Stat(keysDir)
+			if err != nil {
+				return fmt.Errorf("keys directory does not exist: %s", keysDir)
+			}
+			// Check if the keys directory contains the required files
+			requiredFiles := []string{"db.crt", "db.der", "db.key", "db.auth", "KEK.der", "KEK.auth", "PK.der", "PK.auth", "tpm2-pcr-private.pem"}
+			for _, file := range requiredFiles {
+				_, err = os.Stat(filepath.Join(keysDir, file))
+				if err != nil {
+					return fmt.Errorf("keys directory does not contain required file: %s", file)
+				}
+			}
 			return CheckRoot()
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
