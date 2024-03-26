@@ -45,6 +45,35 @@ var _ = Describe("genkey", func() {
 			expectExpirationIn(1000, resultDir)
 		})
 	})
+
+	When("skip-microsoft-certs-I-KNOW-WHAT-IM-DOING is set", func() {
+		It("doesn't bake-in the microsoft certificates", func() {
+			out, err := enki.Run("genkey",
+				"--skip-microsoft-certs-I-KNOW-WHAT-IM-DOING",
+				"-o", resultDir, "mykey")
+			Expect(err).ToNot(HaveOccurred(), out)
+
+			// Hackish way to inspect the binary (I couldn't find a better one)
+			cmd := exec.Command("cat", filepath.Join(resultDir, "db.auth"))
+			o, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), o)
+			Expect(string(o)).ToNot(MatchRegexp(".*microsoft.*"))
+		})
+	})
+
+	When("skip-microsoft-certs-I-KNOW-WHAT-IM-DOING is not set", func() {
+		It("bakes-in the microsoft certificates", func() {
+			out, err := enki.Run("genkey",
+				"-o", resultDir, "mykey")
+			Expect(err).ToNot(HaveOccurred(), out)
+
+			// Hackish way to inspect the binary (I couldn't find a better one)
+			cmd := exec.Command("cat", filepath.Join(resultDir, "db.auth"))
+			o, err := cmd.CombinedOutput()
+			Expect(err).ToNot(HaveOccurred(), o)
+			Expect(string(o)).To(MatchRegexp(".*microsoft.*"))
+		})
+	})
 })
 
 // getDateFromString accepts a date in the form: "Feb  6 15:53:30 2025 GMT"
