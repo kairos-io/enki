@@ -17,7 +17,10 @@ import (
 	"github.com/foxboron/sbctl/fs"
 )
 
-const skipMicrosoftCerts = "skip-microsoft-certs-I-KNOW-WHAT-IM-DOING"
+const (
+	skipMicrosoftCertsFlag = "skip-microsoft-certs-I-KNOW-WHAT-IM-DOING"
+	customCertDirFlag      = "custom-cert-dir"
+)
 
 func NewGenkeyCmd() *cobra.Command {
 	c := &cobra.Command{
@@ -105,7 +108,9 @@ func NewGenkeyCmd() *cobra.Command {
 	}
 	c.Flags().StringP("output", "o", "keys/", "Output directory for the keys")
 	c.Flags().StringP("expiration-in-days", "e", "365", "In how many days from today should the certificates expire")
-	c.Flags().Bool(skipMicrosoftCerts, false, "When set to true, microsoft certs are not included in the KEK and db files. THIS COULD BRICK YOUR SYSTEM! (https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot#Enrolling_Option_ROM_digests). Only use this if you are sure your hardware doesn't need the microsoft certs!")
+	c.Flags().Bool(skipMicrosoftCertsFlag, false, "When set to true, microsoft certs are not included in the KEK and db files. THIS COULD BRICK YOUR SYSTEM! (https://wiki.archlinux.org/title/Unified_Extensible_Firmware_Interface/Secure_Boot#Enrolling_Option_ROM_digests). Only use this if you are sure your hardware doesn't need the microsoft certs!")
+
+	c.Flags().String(customCertDirFlag, "", "Path to a directory containing custom certificates to enroll")
 
 	viper.BindPFlag("expiration-in-days", c.Flags().Lookup("expiration-in-days"))
 	return c
@@ -133,13 +138,23 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
 		return fmt.Errorf("appending signature %w", err)
 	}
 
-	if keyType != "PK" && !viper.GetBool(skipMicrosoftCerts) {
+	if keyType != "PK" && !viper.GetBool(skipMicrosoftCertsFlag) {
 		// Load microsoft certs
 		oemSigDb, err := certs.GetOEMCerts("microsoft", keyType)
 		if err != nil {
 			return fmt.Errorf("failed to load microsoft keys (type %s): %w", keyType, err)
 		}
 		sigdb.AppendDatabase(oemSigDb)
+	}
+
+	customCertDir := viper.GetString(customCertDirFlag)
+	if keyType != "PK" && customCertDir != "" {
+		customSigDb, err := certs.GetCustomCerts(customCertDir, keyType)
+		if err != nil {
+			return fmt.Errorf("could not load custom keys (type: %s): %w", keyType, err)
+		}
+		fmt.Printf("customSigDb = %+v\n", customSigDb)
+		sigdb.AppendDatabase(customSigDb)
 	}
 
 	signedDB, err := sbctl.SignDatabase(sigdb, key, pem, keyType)
