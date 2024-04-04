@@ -162,7 +162,6 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir s
 		sigdb.AppendDatabase(oemSigDb)
 	}
 
-	// TODO: PK too?
 	if keyType != "PK" && customDerCertDir != "" {
 		customSigDb, err := certs.GetCustomCerts(customDerCertDir, keyType)
 		if err != nil {
@@ -193,9 +192,7 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir s
 // The keys are expected to be in the "der" format in a specific directory structure.
 // The given directory should have the following files:
 // - db
-// - dbx
 // - KEK
-// - PK
 // It returns the prepared temporary directory where the keys are stored in
 // "der" format in the expected directories.
 func prepareCustomCertsDir(l v1.Logger) (string, error) {
@@ -212,7 +209,6 @@ func prepareCustomCertsDir(l v1.Logger) (string, error) {
 		return "", fmt.Errorf("creating temporary directory: %w", err)
 	}
 
-	// TODO: PK too?
 	for _, keyType := range []string{"db", "KEK"} {
 		b, err := ioutil.ReadFile(filepath.Join(customCertDir, keyType))
 		if err != nil {

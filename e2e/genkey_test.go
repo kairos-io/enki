@@ -87,6 +87,16 @@ var _ = Describe("genkey", func() {
 			expectAuthToContainSigner("ASUS", filepath.Join(resultDir, "db.auth"))
 			expectAuthToContainSigner("mykey", filepath.Join(resultDir, "db.auth"))
 		})
+
+		When("the directory does not contain the db file", func() {
+			It("returns an error", func() {
+				out, err := enki.Run("genkey",
+					"-o", resultDir, // random directory without the db file
+					"--custom-cert-dir", "/tmp", "mykey")
+				Expect(err).To(HaveOccurred())
+				Expect(out).To(ContainSubstring("reading custom cert file db: open /tmp/db: no such file or directory"))
+			})
+		})
 	})
 })
 
