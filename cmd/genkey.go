@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/kairos-io/enki/pkg/config"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
@@ -55,16 +56,15 @@ func NewGenkeyCmd() *cobra.Command {
 				return err
 			}
 
-			derDir := ""
+			customDerDir := ""
 			if customCertDir := viper.GetString(customCertDirFlag); customCertDir != "" {
-				derDir, err = prepareCustomCertsDir(l)
+				customDerDir, err = prepareCustomDerDir(l)
 				if err != nil {
 					l.Errorf("Error preparing custom certs directory: %s", err)
 					return err
 				}
 			}
-
-			defer os.RemoveAll(derDir)
+			defer os.RemoveAll(customDerDir)
 
 			for _, keyType := range []string{"PK", "KEK", "db"} {
 				l.Infof("Generating %s", keyType)
@@ -100,10 +100,19 @@ func NewGenkeyCmd() *cobra.Command {
 				}
 				l.Infof("%s generated at %s", keyType, der)
 
-				err = generateAuthKeys(*guid, output, keyType, derDir)
+				err = generateAuthKeys(*guid, output, keyType, customDerDir)
 				if err != nil {
 					l.Errorf("Error generating auth keys: %s", err)
 					return err
+				}
+
+				// Make sure the "der" format also includes the custom certs
+				if customDerDir != "" && keyType != "PK" {
+					err = appendCustomDerCerts(l, keyType, customDerDir, output)
+					if err != nil {
+						l.Errorf("Error appending custom der certs: %s", err)
+						return err
+					}
 				}
 			}
 
@@ -186,7 +195,7 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir s
 	return nil
 }
 
-// prepareCustomCertsDir takes a cert directory with keys as they are exported
+// prepareCustomDerDir takes a cert directory with keys as they are exported
 // from the UEFI firmware and prepares them for use with sbctl.
 // The keys are exported in the "authenticated variables" format.
 // The keys are expected to be in the "der" format in a specific directory structure.
@@ -195,7 +204,7 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir s
 // - KEK
 // It returns the prepared temporary directory where the keys are stored in
 // "der" format in the expected directories.
-func prepareCustomCertsDir(l v1.Logger) (string, error) {
+func prepareCustomDerDir(l v1.Logger) (string, error) {
 	customCertDir := viper.GetString(customCertDirFlag)
 	if customCertDir != "" {
 		if _, err := os.Stat(customCertDir); os.IsNotExist(err) {
@@ -243,4 +252,40 @@ func prepareCustomCertsDir(l v1.Logger) (string, error) {
 	}
 
 	return tmpDir, nil
+}
+
+func appendCustomDerCerts(l v1.Logger, keyType, customDerCertDir, keyPath string) error {
+	if customDerCertDir == "" {
+		return nil
+	}
+
+	// Open the file to append to
+	finalDerFile := filepath.Join(keyPath, keyType+".der")
+	final, err := os.OpenFile(finalDerFile, os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return fmt.Errorf("opening final der file %s: %w", finalDerFile, err)
+	}
+	defer final.Close()
+
+	customDerDir := filepath.Join(customDerCertDir, "custom", keyType)
+	err = filepath.Walk(customDerDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		// Check if it's a regular file and if the name starts with the specified prefix
+		if !info.IsDir() && strings.HasPrefix(info.Name(), keyType) {
+			customData, err := ioutil.ReadFile(filepath.Join(customDerDir, info.Name()))
+			if err != nil {
+				return fmt.Errorf("reading custom der file %s: %w", keyType, err)
+			}
+
+			_, err = final.Write(customData)
+			if err != nil {
+				return fmt.Errorf("appending custom der file %s: %w", keyType, err)
+			}
+		}
+		return nil
+	})
+
+	return err
 }

@@ -77,7 +77,7 @@ var _ = Describe("genkey", func() {
 	})
 
 	When("custom-cert-dir is used", func() {
-		It("embeds the custom certs", func() {
+		It("embeds the custom certs to the .auth files", func() {
 			out, err := enki.Run("genkey",
 				"-o", resultDir,
 				"--custom-cert-dir", asusKeysDir, "mykey")
@@ -86,6 +86,27 @@ var _ = Describe("genkey", func() {
 			expectAuthToContainSigner("Microsoft", filepath.Join(resultDir, "db.auth"))
 			expectAuthToContainSigner("ASUS", filepath.Join(resultDir, "db.auth"))
 			expectAuthToContainSigner("mykey", filepath.Join(resultDir, "db.auth"))
+
+			expectAuthToContainSigner("Microsoft", filepath.Join(resultDir, "KEK.auth"))
+			expectAuthToContainSigner("ASUS", filepath.Join(resultDir, "KEK.auth"))
+			expectAuthToContainSigner("mykey", filepath.Join(resultDir, "KEK.auth"))
+		})
+
+		It("embeds the custom certs to the .der files", func() {
+			out, err := enki.Run("genkey",
+				"-o", resultDir,
+				"--custom-cert-dir", asusKeysDir, "mykey")
+			Expect(err).ToNot(HaveOccurred(), out)
+
+			issuers := getIssuersFromDER(filepath.Join(resultDir, "db.der"))
+			Expect(issuers).To(ContainElement(MatchRegexp("Microsoft")))
+			Expect(issuers).To(ContainElement(MatchRegexp("mykey")))
+			Expect(issuers).To(ContainElement(MatchRegexp("ASUS")))
+
+			issuers = getIssuersFromDER(filepath.Join(resultDir, "KEK.der"))
+			Expect(issuers).To(ContainElement(MatchRegexp("Microsoft")))
+			Expect(issuers).To(ContainElement(MatchRegexp("mykey")))
+			Expect(issuers).To(ContainElement(MatchRegexp("ASUS")))
 		})
 
 		When("the directory does not contain the db file", func() {
@@ -133,6 +154,15 @@ func authIssuers(authFile string) []string {
 	return issuers
 }
 
+func expectDerToContainIssuer(issuer, derFile string) {
+	cmd := exec.Command("openssl", "x509", "-in", derFile, "-noout", "-inform", "der", "-text")
+
+	out, err := cmd.CombinedOutput()
+	Expect(err).ToNot(HaveOccurred(), string(out))
+
+	Expect(string(out)).To(ContainSubstring(issuer))
+}
+
 // getDateFromString accepts a date in the form: "Feb  6 15:53:30 2025 GMT"
 // and returns the day, month and year as integers
 func getDateFromString(dateString string) (int, int, int) {
@@ -158,4 +188,22 @@ func expectExpirationIn(n int, resultDir string) {
 	Expect(certDay).To(Equal(expectedTime.Day()))
 	Expect(certMonth).To(Equal(int(expectedTime.Month())))
 	Expect(certYear).To(Equal(expectedTime.Year()))
+}
+
+func getIssuersFromDER(filePath string) []string {
+	// Open the DER file
+	fileData, err := ioutil.ReadFile(filePath)
+	Expect(err).ToNot(HaveOccurred())
+
+	var issuers []string
+
+	certs, err := x509.ParseCertificates(fileData)
+	Expect(err).ToNot(HaveOccurred())
+
+	for _, cert := range certs {
+		// Append the issuer to the list
+		issuers = append(issuers, cert.Issuer.String())
+	}
+
+	return issuers
 }

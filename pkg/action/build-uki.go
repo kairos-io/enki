@@ -632,9 +632,9 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 		"loader/entries": {},
 		"loader/keys":    {},
 		"loader/keys/auto": {
-			// filepath.Join(b.keysDirectory, "PK.der"),
-			// filepath.Join(b.keysDirectory, "KEK.der"),
-			// filepath.Join(b.keysDirectory, "db.der"),
+			filepath.Join(b.keysDirectory, "PK.der"),
+			filepath.Join(b.keysDirectory, "KEK.der"),
+			filepath.Join(b.keysDirectory, "db.der"),
 			filepath.Join(b.keysDirectory, "PK.auth"),
 			filepath.Join(b.keysDirectory, "KEK.auth"),
 			filepath.Join(b.keysDirectory, "db.auth")},
