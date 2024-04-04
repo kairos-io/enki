@@ -93,7 +93,8 @@ func NewBuildUKICmd() *cobra.Command {
 				return fmt.Errorf("keys directory does not exist: %s", keysDir)
 			}
 			// Check if the keys directory contains the required files
-			requiredFiles := []string{"db.der", "db.key", "db.auth", "KEK.der", "KEK.auth", "PK.der", "PK.auth", "tpm2-pcr-private.pem"}
+			//requiredFiles := []string{"db.der", "db.key", "db.auth", "KEK.der", "KEK.auth", "PK.der", "PK.auth", "tpm2-pcr-private.pem"}
+			requiredFiles := []string{"db.auth", "KEK.auth", "PK.auth"}
 			for _, file := range requiredFiles {
 				_, err = os.Stat(filepath.Join(keysDir, file))
 				if err != nil {

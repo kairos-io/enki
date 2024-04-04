@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"bytes"
+	"crypto/x509"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 
 	"github.com/kairos-io/enki/pkg/config"
+	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -51,6 +55,17 @@ func NewGenkeyCmd() *cobra.Command {
 				return err
 			}
 
+			derDir := ""
+			if customCertDir := viper.GetString(customCertDirFlag); customCertDir != "" {
+				derDir, err = prepareCustomCertsDir(l)
+				if err != nil {
+					l.Errorf("Error preparing custom certs directory: %s", err)
+					return err
+				}
+			}
+
+			defer os.RemoveAll(derDir)
+
 			for _, keyType := range []string{"PK", "KEK", "db"} {
 				l.Infof("Generating %s", keyType)
 				key := filepath.Join(output, fmt.Sprintf("%s.key", keyType))
@@ -85,7 +100,7 @@ func NewGenkeyCmd() *cobra.Command {
 				}
 				l.Infof("%s generated at %s", keyType, der)
 
-				err = generateAuthKeys(*guid, output, keyType)
+				err = generateAuthKeys(*guid, output, keyType, derDir)
 				if err != nil {
 					l.Errorf("Error generating auth keys: %s", err)
 					return err
@@ -120,7 +135,7 @@ func init() {
 	rootCmd.AddCommand(NewGenkeyCmd())
 }
 
-func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
+func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir string) error {
 	// Prepare all the keys we need
 	key, err := fs.ReadFile(filepath.Join(keyPath, keyType+".key"))
 	if err != nil {
@@ -147,13 +162,12 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
 		sigdb.AppendDatabase(oemSigDb)
 	}
 
-	customCertDir := viper.GetString(customCertDirFlag)
-	if keyType != "PK" && customCertDir != "" {
-		customSigDb, err := certs.GetCustomCerts(customCertDir, keyType)
+	// TODO: PK too?
+	if keyType != "PK" && customDerCertDir != "" {
+		customSigDb, err := certs.GetCustomCerts(customDerCertDir, keyType)
 		if err != nil {
 			return fmt.Errorf("could not load custom keys (type: %s): %w", keyType, err)
 		}
-		fmt.Printf("customSigDb = %+v\n", customSigDb)
 		sigdb.AppendDatabase(customSigDb)
 	}
 
@@ -171,4 +185,66 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType string) error {
 	}
 
 	return nil
+}
+
+// prepareCustomCertsDir takes a cert directory with keys as they are exported
+// from the UEFI firmware and prepares them for use with sbctl.
+// The keys are exported in the "authenticated variables" format.
+// The keys are expected to be in the "der" format in a specific directory structure.
+// The given directory should have the following files:
+// - db
+// - dbx
+// - KEK
+// - PK
+// It returns the prepared temporary directory where the keys are stored in
+// "der" format in the expected directories.
+func prepareCustomCertsDir(l v1.Logger) (string, error) {
+	customCertDir := viper.GetString(customCertDirFlag)
+	if customCertDir != "" {
+		if _, err := os.Stat(customCertDir); os.IsNotExist(err) {
+			return "", fmt.Errorf("custom cert directory does not exist: %s", customCertDir)
+		}
+	}
+
+	// create a temporary directory to store the custom certs
+	tmpDir, err := os.MkdirTemp("", "sbctl-custom-certs-*")
+	if err != nil {
+		return "", fmt.Errorf("creating temporary directory: %w", err)
+	}
+
+	// TODO: PK too?
+	for _, keyType := range []string{"db", "KEK"} {
+		b, err := ioutil.ReadFile(filepath.Join(customCertDir, keyType))
+		if err != nil {
+			return "", fmt.Errorf("reading custom cert file %s: %w", keyType, err)
+		}
+		f := bytes.NewReader(b)
+		siglist, err := signature.ReadSignatureDatabase(f)
+		if err != nil {
+			return "", fmt.Errorf("reading signature database: %w", err)
+		}
+
+		l.Infof("Converting custom certs (type: %s)\n", keyType)
+		for _, sig := range siglist {
+			for _, sigEntry := range sig.Signatures {
+				l.Infof("	Signature Owner: %s\n", sigEntry.Owner.Format())
+				switch sig.SignatureType {
+				case signature.CERT_X509_GUID, signature.CERT_SHA256_GUID:
+					cert, _ := x509.ParseCertificate(sigEntry.Data)
+					if cert != nil {
+						keyDir := filepath.Join(tmpDir, "custom", keyType)
+						err := os.MkdirAll(keyDir, 0755)
+						if err != nil {
+							return "", fmt.Errorf("creating directory for key type %s: %w", keyType, err)
+						}
+						os.WriteFile(filepath.Join(keyDir, fmt.Sprintf("%s%s", keyType, cert.SerialNumber.String())), cert.Raw, 0644)
+					}
+				default:
+					l.Errorf("Not implemented!\n%s\n", sig.SignatureType.Format())
+				}
+			}
+		}
+	}
+
+	return tmpDir, nil
 }
