@@ -56,19 +56,49 @@ var _ = Describe("build-uki", func() {
 		})
 	})
 
-	It("successfully builds a uki iso from a container image", func() {
-		out, err := enki.Run("genkey", "--output", keysDir, "TEST")
-		Expect(err).ToNot(HaveOccurred(), out)
-		fmt.Println(out)
+	Describe("building an iso", func() {
+		When("secure-boot-enroll is not set", func() {
+			It("successfully builds a uki iso from a container image", func() {
+				By("building the iso with secure-boot-enroll not set")
+				buildISO(enki, image, keysDir, resultDir, resultFile)
+				By("checking if the default value for secure-boot-enroll is set")
+				content := readLoaderConf(enki, resultFile)
+				Expect(string(content)).To(MatchRegexp(`^secure-boot-enroll if-safe$`))
+			})
+		})
 
-		out, err = enki.Run("build-uki", image, "--output-dir", resultDir, "-k", keysDir, "--output-type", "iso")
-		Expect(err).ToNot(HaveOccurred(), out)
-
-		By("building the iso")
-		_, err = os.Stat(resultFile)
-		Expect(err).ToNot(HaveOccurred())
-
-		By("booting the iso")
-		// TODO: Move the uki test here from kairos?
+		When("secure-boot-enroll is set", func() {
+			It("successfully builds a uki iso from a container image", func() {
+				By("building the iso with secure-boot-enroll set to manual")
+				buildISO(enki, image, keysDir, resultDir, resultFile, "--secure-boot-enroll", "manual")
+				By("checking if the user value for secure-boot-enroll is set")
+				content := readLoaderConf(enki, resultFile)
+				Expect(string(content)).To(MatchRegexp(`^secure-boot-enroll manual$`))
+			})
+		})
 	})
 })
+
+func buildISO(enki *Enki, image, keysDir, resultDir, resultFile string, additionalArgs ...string) {
+	out, err := enki.Run("genkey", "--output", keysDir, "TEST")
+	Expect(err).ToNot(HaveOccurred(), out)
+	fmt.Println(out)
+
+	out, err = enki.Run("build-uki", image, "--output-dir", resultDir, "-k", keysDir, "--output-type", "iso")
+	Expect(err).ToNot(HaveOccurred(), out)
+
+	By("building the iso")
+	_, err = os.Stat(resultFile)
+	Expect(err).ToNot(HaveOccurred())
+}
+
+func readLoaderConf(enki *Enki, isoFile string) string {
+	By("checking the loader.conf file")
+	out, err := enki.ContainerRun("/bin/bash", "-c", fmt.Sprintf(`#!/bin/bash
+		mount -o loop %s /tmp/iso 2>&1 > /dev/null
+		mount -o loop /tmp/iso/efiboot.img /tmp/efi 2>&1 > /dev/null
+		cat /tmp/efi/loader/loader.conf`, isoFile))
+	Expect(err).ToNot(HaveOccurred())
+
+	return out
+}

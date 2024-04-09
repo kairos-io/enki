@@ -37,20 +37,24 @@ func NewEnki(image string, dirs ...string) *Enki {
 // are in place (or to test the behavior of enki when they are not), we run enki
 // in a container using this function.
 func (e *Enki) Run(enkiArgs ...string) (string, error) {
-	args := []string{
+	return e.ContainerRun("/bin/enki", enkiArgs...)
+}
+
+func (e *Enki) ContainerRun(entrypoint string, args ...string) (string, error) {
+	dockerArgs := []string{
 		"run", "--rm",
-		"--entrypoint", "/bin/enki",
+		"--entrypoint", entrypoint,
 		"-v", fmt.Sprintf("%s:/bin/enki", e.Path),
 	}
 
 	for _, d := range e.Dirs {
-		args = append(args, "-v", fmt.Sprintf("%[1]s:%[1]s", d))
+		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%[1]s:%[1]s", d))
 	}
 
-	args = append(args, e.ContainerImage)
-	args = append(args, enkiArgs...)
+	dockerArgs = append(dockerArgs, e.ContainerImage)
+	dockerArgs = append(dockerArgs, args...)
 
-	cmd := exec.Command("docker", args...)
+	cmd := exec.Command("docker", dockerArgs...)
 
 	out, err := cmd.CombinedOutput()
 
