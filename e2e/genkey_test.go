@@ -1,12 +1,16 @@
 package e2e_test
 
 import (
+	"bytes"
+	"crypto/x509"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/foxboron/go-uefi/efi/signature"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -15,12 +19,17 @@ var _ = Describe("genkey", func() {
 	var resultDir string
 	var err error
 	var enki *Enki
+	var asusKeysDir string
 
 	BeforeEach(func() {
 		resultDir, err = os.MkdirTemp("", "enki-genkey-test-")
 		Expect(err).ToNot(HaveOccurred())
 
-		enki = NewEnki("enki-image", resultDir)
+		currentDir, err := os.Getwd()
+		Expect(err).ToNot(HaveOccurred())
+		asusKeysDir = filepath.Join(currentDir, "assets", "asus-PN64-vendor-keys")
+
+		enki = NewEnki("enki-image", resultDir, asusKeysDir)
 	})
 
 	AfterEach(func() {
@@ -53,11 +62,7 @@ var _ = Describe("genkey", func() {
 				"-o", resultDir, "mykey")
 			Expect(err).ToNot(HaveOccurred(), out)
 
-			// Hackish way to inspect the binary (I couldn't find a better one)
-			cmd := exec.Command("cat", filepath.Join(resultDir, "db.auth"))
-			o, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), o)
-			Expect(string(o)).ToNot(MatchRegexp(".*microsoft.*"))
+			expectAuthToNotContainSigner("Microsoft", filepath.Join(resultDir, "db.auth"))
 		})
 	})
 
@@ -67,14 +72,96 @@ var _ = Describe("genkey", func() {
 				"-o", resultDir, "mykey")
 			Expect(err).ToNot(HaveOccurred(), out)
 
-			// Hackish way to inspect the binary (I couldn't find a better one)
-			cmd := exec.Command("cat", filepath.Join(resultDir, "db.auth"))
-			o, err := cmd.CombinedOutput()
-			Expect(err).ToNot(HaveOccurred(), o)
-			Expect(string(o)).To(MatchRegexp(".*microsoft.*"))
+			expectAuthToContainSigner("Microsoft", filepath.Join(resultDir, "db.auth"))
+		})
+	})
+
+	When("custom-cert-dir is used", func() {
+		It("embeds the custom certs to the .auth files", func() {
+			out, err := enki.Run("genkey",
+				"-o", resultDir,
+				"--custom-cert-dir", asusKeysDir, "mykey")
+			Expect(err).ToNot(HaveOccurred(), out)
+
+			expectAuthToContainSigner("Microsoft", filepath.Join(resultDir, "db.auth"))
+			expectAuthToContainSigner("ASUS", filepath.Join(resultDir, "db.auth"))
+			expectAuthToContainSigner("mykey", filepath.Join(resultDir, "db.auth"))
+
+			expectAuthToContainSigner("Microsoft", filepath.Join(resultDir, "KEK.auth"))
+			expectAuthToContainSigner("ASUS", filepath.Join(resultDir, "KEK.auth"))
+			expectAuthToContainSigner("mykey", filepath.Join(resultDir, "KEK.auth"))
+		})
+
+		It("embeds the custom certs to the .der files", func() {
+			out, err := enki.Run("genkey",
+				"-o", resultDir,
+				"--custom-cert-dir", asusKeysDir, "mykey")
+			Expect(err).ToNot(HaveOccurred(), out)
+
+			issuers := getIssuersFromDER(filepath.Join(resultDir, "db.der"))
+			Expect(issuers).To(ContainElement(MatchRegexp("Microsoft")))
+			Expect(issuers).To(ContainElement(MatchRegexp("mykey")))
+			Expect(issuers).To(ContainElement(MatchRegexp("ASUS")))
+
+			issuers = getIssuersFromDER(filepath.Join(resultDir, "KEK.der"))
+			Expect(issuers).To(ContainElement(MatchRegexp("Microsoft")))
+			Expect(issuers).To(ContainElement(MatchRegexp("mykey")))
+			Expect(issuers).To(ContainElement(MatchRegexp("ASUS")))
+		})
+
+		When("the directory does not contain the db file", func() {
+			It("returns an error", func() {
+				out, err := enki.Run("genkey",
+					"-o", resultDir, // random directory without the db file
+					"--custom-cert-dir", "/tmp", "mykey")
+				Expect(err).To(HaveOccurred())
+				Expect(out).To(ContainSubstring("reading custom cert file db: open /tmp/db: no such file or directory"))
+			})
 		})
 	})
 })
+
+func expectAuthToContainSigner(owner, authFile string) {
+	Expect(authIssuers(authFile)).To(ContainElement(MatchRegexp(owner)), "Expected %s to be in %s", owner, authFile)
+}
+
+func expectAuthToNotContainSigner(owner, authFile string) {
+	Expect(authIssuers(authFile)).ToNot(ContainElement(MatchRegexp(owner)), "Expected %s to not be in %s", owner, authFile)
+}
+
+func authIssuers(authFile string) []string {
+	b, err := ioutil.ReadFile(authFile)
+	Expect(err).ToNot(HaveOccurred())
+
+	f := bytes.NewReader(b)
+	_, err = signature.ReadEFIVariableAuthencation2(f)
+	Expect(err).ToNot(HaveOccurred())
+	siglist, err := signature.ReadSignatureDatabase(f)
+	Expect(err).ToNot(HaveOccurred())
+
+	issuers := []string{}
+	for _, sig := range siglist {
+		for _, sigEntry := range sig.Signatures {
+			if sig.SignatureType == signature.CERT_X509_GUID {
+				cert, _ := x509.ParseCertificate(sigEntry.Data)
+				if cert != nil {
+					issuers = append(issuers, cert.Issuer.String())
+				}
+			}
+		}
+	}
+
+	return issuers
+}
+
+func expectDerToContainIssuer(issuer, derFile string) {
+	cmd := exec.Command("openssl", "x509", "-in", derFile, "-noout", "-inform", "der", "-text")
+
+	out, err := cmd.CombinedOutput()
+	Expect(err).ToNot(HaveOccurred(), string(out))
+
+	Expect(string(out)).To(ContainSubstring(issuer))
+}
 
 // getDateFromString accepts a date in the form: "Feb  6 15:53:30 2025 GMT"
 // and returns the day, month and year as integers
@@ -101,4 +188,22 @@ func expectExpirationIn(n int, resultDir string) {
 	Expect(certDay).To(Equal(expectedTime.Day()))
 	Expect(certMonth).To(Equal(int(expectedTime.Month())))
 	Expect(certYear).To(Equal(expectedTime.Year()))
+}
+
+func getIssuersFromDER(filePath string) []string {
+	// Open the DER file
+	fileData, err := ioutil.ReadFile(filePath)
+	Expect(err).ToNot(HaveOccurred())
+
+	var issuers []string
+
+	certs, err := x509.ParseCertificates(fileData)
+	Expect(err).ToNot(HaveOccurred())
+
+	for _, cert := range certs {
+		// Append the issuer to the list
+		issuers = append(issuers, cert.Issuer.String())
+	}
+
+	return issuers
 }
