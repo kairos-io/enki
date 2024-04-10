@@ -76,8 +76,8 @@ var _ = Describe("build-uki", func() {
 })
 
 func buildISO(enki *Enki, image, keysDir, resultDir, resultFile string, additionalArgs ...string) {
-	out, err := enki.Run("build-uki", image, "--output-dir", resultDir,
-		"-k", keysDir, "--output-type", "iso")
+	out, err := enki.Run(append([]string{"build-uki", image, "--output-dir", resultDir,
+		"-k", keysDir, "--output-type", "iso"}, additionalArgs...)...)
 	Expect(err).ToNot(HaveOccurred(), out)
 
 	By("building the iso")
