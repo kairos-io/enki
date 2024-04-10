@@ -40,9 +40,10 @@ func (e *Enki) Run(enkiArgs ...string) (string, error) {
 	return e.ContainerRun("/bin/enki", enkiArgs...)
 }
 
+// We need --privileged for `mount` to work in the container (used in the build_uki_test.go).
 func (e *Enki) ContainerRun(entrypoint string, args ...string) (string, error) {
 	dockerArgs := []string{
-		"run", "--rm",
+		"run", "--rm", "--privileged",
 		"--entrypoint", entrypoint,
 		"-v", fmt.Sprintf("%s:/bin/enki", e.Path),
 	}
