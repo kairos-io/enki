@@ -182,8 +182,10 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 		// This is the one name that has nothing added, just the version
 		finalEfiConf = nameFromCmdline(constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
 	}
+
+	secureBootEnroll := viper.GetString("secure-boot-enroll")
 	// Set that as default selection for booting
-	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\nsecure-boot-enroll if-safe\n", finalEfiConf)
+	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\nsecure-boot-enroll %s\n", finalEfiConf, secureBootEnroll)
 	err := os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the loader.conf file: %s", err)

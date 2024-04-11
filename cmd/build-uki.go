@@ -150,6 +150,8 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
 	c.Flags().Int64P("efi-size-warn", "", 1024, "EFI file size warning threshold in megabytes. Default is 1024.")
+	c.Flags().String("secure-boot-enroll", "if-safe", "The value of secure-boot-enroll option of systemd-boot. Possible values: off|manual|if-safe|force. Minimum systemd version: 253. Docs: https://manpages.debian.org/experimental/systemd-boot/loader.conf.5.en.html. !! Danger: this feature might soft-brick your device if used improperly !!")
+
 	c.MarkFlagRequired("keys")
 	// Mark some flags as mutually exclusive
 	c.MarkFlagsMutuallyExclusive([]string{"extra-cmdline", "extend-cmdline"}...)
