@@ -184,10 +184,6 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 	}
 
 	secureBootEnroll := viper.GetString("secure-boot-enroll")
-	if secureBootEnroll == "" {
-		secureBootEnroll = "if-safe"
-	}
-
 	// Set that as default selection for booting
 	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\nsecure-boot-enroll %s\n", finalEfiConf, secureBootEnroll)
 	err := os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
