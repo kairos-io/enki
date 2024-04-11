@@ -52,11 +52,14 @@ var _ = Describe("build-uki", func() {
 		})
 	})
 
-	Describe("building an iso", func() {
+	Describe("secure-boot-enroll setting in loader.conf", func() {
 		When("secure-boot-enroll is not set", func() {
-			It("successfully builds a uki iso from a container image", func() {
+			BeforeEach(func() {
 				By("building the iso with secure-boot-enroll not set")
 				buildISO(enki, image, keysDir, resultDir, resultFile)
+			})
+
+			It("sets the secure-boot-enroll correctly", func() {
 				By("checking if the default value for secure-boot-enroll is set")
 				content := readLoaderConf(enki, resultFile)
 				Expect(string(content)).To(MatchRegexp("secure-boot-enroll if-safe"))
@@ -64,9 +67,12 @@ var _ = Describe("build-uki", func() {
 		})
 
 		When("secure-boot-enroll is set", func() {
-			It("successfully builds a uki iso from a container image", func() {
+			BeforeEach(func() {
 				By("building the iso with secure-boot-enroll set to manual")
 				buildISO(enki, image, keysDir, resultDir, resultFile, "--secure-boot-enroll", "manual")
+			})
+
+			It("sets the secure-boot-enroll correctly", func() {
 				By("checking if the user value for secure-boot-enroll is set")
 				content := readLoaderConf(enki, resultFile)
 				Expect(string(content)).To(MatchRegexp("secure-boot-enroll manual"))
