@@ -86,7 +86,7 @@ func GetUkiSingleCmdlines(logger v1.Logger) map[string]string {
 	// extra
 	cmdlines := viper.GetStringSlice("single-efi-cmdline")
 	for _, userValue := range cmdlines {
-		userSplitValues := strings.SplitN(userValue, "=", 2)
+		userSplitValues := strings.SplitN(userValue, ":", 2)
 		if len(userSplitValues) != 2 {
 			logger.Warnf("bad value for single-efi-cmdline: %s", userValue)
 			continue
