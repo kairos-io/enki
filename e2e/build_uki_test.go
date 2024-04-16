@@ -52,6 +52,26 @@ var _ = Describe("build-uki", func() {
 		})
 	})
 
+	Describe("single-efi-cmdline", func() {
+		BeforeEach(func() {
+			By("building the iso with single-efi-cmdline flags set")
+			buildISO(enki, image, keysDir, resultDir, resultFile,
+				"--single-efi-cmdline", "My Entry: someoption=somevalue",
+				"--single-efi-cmdline", "My Other Entry: someoption2=somevalue2")
+		})
+
+		It("creates additional .efi and .conf files", func() {
+			By("checking if the default value for secure-boot-enroll is set")
+			content := listEfiFiles(enki, resultFile)
+			Expect(string(content)).To(MatchRegexp("My_Entry.efi"))
+			Expect(string(content)).To(MatchRegexp("My_Other_Entry.efi"))
+
+			content = listConfFiles(enki, resultFile)
+			Expect(string(content)).To(MatchRegexp("My_Entry.conf"))
+			Expect(string(content)).To(MatchRegexp("My_Other_Entry.conf"))
+		})
+	})
+
 	Describe("secure-boot-enroll setting in loader.conf", func() {
 		When("secure-boot-enroll is not set", func() {
 			BeforeEach(func() {
@@ -92,14 +112,29 @@ func buildISO(enki *Enki, image, keysDir, resultDir, resultFile string, addition
 }
 
 func readLoaderConf(enki *Enki, isoFile string) string {
-	By("checking the loader.conf file")
+	return runCommandInIso(enki, isoFile, "cat /tmp/efi/loader/loader.conf")
+}
+
+func listEfiFiles(enki *Enki, isoFile string) string {
+	return runCommandInIso(enki, isoFile, "ls /tmp/efi/EFI/kairos")
+}
+
+func listConfFiles(enki *Enki, isoFile string) string {
+	return runCommandInIso(enki, isoFile, "ls /tmp/efi/loader/entries")
+}
+
+func runCommandInIso(enki *Enki, isoFile, command string) string {
+	By("running command: " + command)
 	out, err := enki.ContainerRun("/bin/bash", "-c",
 		fmt.Sprintf(`#!/bin/bash
 set -e
 mkdir -p /tmp/iso /tmp/efi
 mount -v -o loop %[1]s /tmp/iso 2>&1 > /dev/null
 mount -v -o loop /tmp/iso/efiboot.img /tmp/efi 2>&1 > /dev/null
-cat /tmp/efi/loader/loader.conf`, isoFile))
+%[2]s
+umount /tmp/efi 2>&1 > /dev/null
+umount /tmp/iso 2>&1 > /dev/null
+`, isoFile, command))
 	Expect(err).ToNot(HaveOccurred(), out)
 
 	return out
