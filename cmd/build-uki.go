@@ -147,7 +147,7 @@ func NewBuildUKICmd() *cobra.Command {
 	c.Flags().BoolP("include-cmdline-in-config", "", false, "Include the cmdline in the .config file. Only the extra values are included.")
 	c.Flags().StringSliceP("extra-cmdline", "c", []string{}, "Add extra efi files with this cmdline for the default 'norole' artifacts. This creates efi files with the default cmdline and extra efi files with the default+provided cmdline.")
 	c.Flags().StringP("extend-cmdline", "x", "", "Extend the default cmdline for the default 'norole' artifacts. This creates efi files with the default+provided cmdline.")
-	c.Flags().StringSliceP("unique-cmdline", "u", []string{}, "Add one extra efi file with the default+provided cmdline. The syntax is '--unique-cmdline boot_entry_name=cmdline,options,here'. The boot entry name is the text under which it appears in systemd-boot menu.")
+	c.Flags().StringSliceP("single-efi-cmdline", "s", []string{}, "Add one extra efi file with the default+provided cmdline. The syntax is '--single-efi-cmdline boot_entry_name=cmdline,options,here'. The boot entry name is the text under which it appears in systemd-boot menu.")
 	c.Flags().StringP("keys", "k", "", "Directory with the signing keys")
 	c.Flags().StringP("default-entry", "e", "", "Default entry selected in the boot menu.\nSupported glob wildcard patterns are \"?\", \"*\", and \"[...]\".\nIf not selected, the default entry with install-mode is selected.")
 	c.Flags().Int64P("efi-size-warn", "", 1024, "EFI file size warning threshold in megabytes. Default is 1024.")

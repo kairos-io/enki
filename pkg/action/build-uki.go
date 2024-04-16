@@ -127,8 +127,8 @@ func (b *BuildUKIAction) Run() error {
 		}
 	}
 
-	uniqueCmdLines := utils.GetUkiUniqueCmdlines(b.logger)
-	for bootEntry, cmdline := range uniqueCmdLines {
+	singleCmdLines := utils.GetUkiSingleCmdlines(b.logger)
+	for bootEntry, cmdline := range singleCmdLines {
 		b.logger.Info("Running ukify for cmdline: " + cmdline)
 
 		fileName := strings.ReplaceAll(bootEntry, " ", "_")
@@ -662,9 +662,9 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
 	}
 
-	// Add the kairos efi files and the loader conf files for the "unique" cmdlines
-	uniqueCmdLines := utils.GetUkiUniqueCmdlines(b.logger)
-	for bootEntry := range uniqueCmdLines {
+	// Add the kairos efi files and the loader conf files for the "single" cmdlines
+	singleCmdLines := utils.GetUkiSingleCmdlines(b.logger)
+	for bootEntry := range singleCmdLines {
 		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, strings.ReplaceAll(bootEntry, " ", "_")+".efi"))
 		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, strings.ReplaceAll(bootEntry, " ", "_")+".conf"))
 	}

@@ -80,15 +80,15 @@ func GetUkiCmdline() []string {
 	}
 }
 
-// GetUkiUniqueCmdlines returns the unique-cmdline as passed by the user.
-func GetUkiUniqueCmdlines(logger v1.Logger) map[string]string {
+// GetUkiSingleCmdlines returns the single-efi-cmdline as passed by the user.
+func GetUkiSingleCmdlines(logger v1.Logger) map[string]string {
 	result := map[string]string{}
 	// extra
-	cmdlines := viper.GetStringSlice("unique-cmdline")
+	cmdlines := viper.GetStringSlice("single-efi-cmdline")
 	for _, userValue := range cmdlines {
 		userSplitValues := strings.SplitN(userValue, "=", 2)
 		if len(userSplitValues) != 2 {
-			logger.Warnf("bad value for unique-cmdline: %s", userValue)
+			logger.Warnf("bad value for single-efi-cmdline: %s", userValue)
 			continue
 		}
 		result[userSplitValues[0]] = constants.UkiCmdline + " " + userSplitValues[1]
