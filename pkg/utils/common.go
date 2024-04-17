@@ -80,6 +80,23 @@ func GetUkiCmdline() []string {
 	}
 }
 
+// GetUkiSingleCmdlines returns the single-efi-cmdline as passed by the user.
+func GetUkiSingleCmdlines(logger v1.Logger) map[string]string {
+	result := map[string]string{}
+	// extra
+	cmdlines := viper.GetStringSlice("single-efi-cmdline")
+	for _, userValue := range cmdlines {
+		userSplitValues := strings.SplitN(userValue, ":", 2)
+		if len(userSplitValues) != 2 {
+			logger.Warnf("bad value for single-efi-cmdline: %s", userValue)
+			continue
+		}
+		result[userSplitValues[0]] = constants.UkiCmdline + " " + userSplitValues[1]
+	}
+
+	return result
+}
+
 // Tar takes a source and variable writers and walks 'source' writing each file
 // found to the tar writer; the purpose for accepting multiple writers is to allow
 // for multiple outputs (for example a file, or md5 hash)

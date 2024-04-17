@@ -115,11 +115,29 @@ func (b *BuildUKIAction) Run() error {
 	cmdlines := utils.GetUkiCmdline()
 	for _, cmdline := range cmdlines {
 		b.logger.Info("Running ukify for cmdline: " + cmdline)
-		if err := b.ukify(sourceDir, artifactsTempDir, cmdline); err != nil {
+		efiName := nameFromCmdline(cmdline)
+		b.logger.Infof("Generating: " + efiName + ".efi")
+		if err := b.ukify(sourceDir, artifactsTempDir, cmdline, efiName+".efi"); err != nil {
 			return err
 		}
 		b.logger.Info("Creating kairos and loader conf files")
-		if err := b.createConfFiles(sourceDir, cmdline); err != nil {
+
+		if err := b.createConfFiles(sourceDir, cmdline, viper.GetString("boot-branding"), efiName); err != nil {
+			return err
+		}
+	}
+
+	singleCmdLines := utils.GetUkiSingleCmdlines(b.logger)
+	for bootEntry, cmdline := range singleCmdLines {
+		b.logger.Info("Running ukify for cmdline: " + cmdline)
+
+		fileName := strings.ReplaceAll(bootEntry, " ", "_")
+		b.logger.Infof("Generating: " + fileName + ".efi")
+		if err := b.ukify(sourceDir, artifactsTempDir, cmdline, fileName+".efi"); err != nil {
+			return err
+		}
+		b.logger.Info("Creating kairos and loader conf files")
+		if err := b.createConfFiles(sourceDir, cmdline, bootEntry, fileName); err != nil {
 			return err
 		}
 	}
@@ -368,14 +386,11 @@ func (b *BuildUKIAction) copyKernel(sourceDir, targetDir string) error {
 	return err
 }
 
-func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline string) error {
+func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline, finalEfiName string) error {
 	// Normally that's still the current dir but just making sure.
 	if err := os.Chdir(sourceDir); err != nil {
 		return fmt.Errorf("changing to %s directory: %w", sourceDir, err)
 	}
-
-	finalEfiName := nameFromCmdline(cmdline) + ".efi"
-	b.logger.Infof("Generating: " + finalEfiName)
 
 	stubFile, err := b.getEfiStub()
 	if err != nil {
@@ -444,10 +459,9 @@ func (b *BuildUKIAction) sbSign(sourceDir string) error {
 	return nil
 }
 
-func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
+func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline, title, finalEfiName string) error {
 	// This is stored in the config
 	var extraCmdline string
-	finalEfiName := nameFromCmdline(cmdline)
 	// For the config title we get only the extra cmdline we added, no replacement of spaces with underscores needed
 	extraCmdline = strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
 	// For the default install entry, do not add anything on the config
@@ -456,7 +470,6 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline string) error {
 	}
 	b.logger.Infof("Creating the %s.conf file", finalEfiName)
 
-	title := viper.GetString("boot-branding")
 	// You can add entries into the config files, they will be ignored by systemd-boot
 	// So we store the cmdline in a key cmdline for easy tracking of what was added to the uki cmdline
 
@@ -647,6 +660,13 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 		finalEfiName := nameFromCmdline(cmdline)
 		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
 		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
+	}
+
+	// Add the kairos efi files and the loader conf files for the "single" cmdlines
+	singleCmdLines := utils.GetUkiSingleCmdlines(b.logger)
+	for bootEntry := range singleCmdLines {
+		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, strings.ReplaceAll(bootEntry, " ", "_")+".efi"))
+		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, strings.ReplaceAll(bootEntry, " ", "_")+".conf"))
 	}
 	b.logger.Debug(fmt.Sprintf("data: %s", litter.Sdump(data)))
 	return data, nil
