@@ -102,6 +102,8 @@ func GetUkiCmdline() []BootEntry {
 func GetUkiSingleCmdlines(logger v1.Logger) []BootEntry {
 	result := []BootEntry{}
 	// extra
+	defaultCmdLine := constants.UkiCmdline + " " + constants.UkiCmdlineInstall
+
 	cmdlines := viper.GetStringSlice("single-efi-cmdline")
 	for _, userValue := range cmdlines {
 		bootEntry := BootEntry{}
@@ -109,11 +111,11 @@ func GetUkiSingleCmdlines(logger v1.Logger) []BootEntry {
 		before, after, hasTitle := strings.Cut(userValue, ":")
 		if hasTitle {
 			bootEntry.Title = fmt.Sprintf("%s (%s)", viper.GetString("boot-branding"), before)
-			bootEntry.Cmdline = after
+			bootEntry.Cmdline = defaultCmdLine + " " + after
 			bootEntry.FileName = strings.ReplaceAll(before, " ", "_")
 		} else {
 			bootEntry.Title = viper.GetString("boot-branding")
-			bootEntry.Cmdline = before
+			bootEntry.Cmdline = defaultCmdLine + " " + before
 			bootEntry.FileName = NameFromCmdline("single_entry", before)
 		}
 		result = append(result, bootEntry)
