@@ -19,6 +19,9 @@ package utils_test
 import (
 	"errors"
 	"fmt"
+	"os"
+	"strings"
+
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/kairos-io/enki/pkg/utils"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
@@ -28,8 +31,6 @@ import (
 	"github.com/spf13/viper"
 	"github.com/twpayne/go-vfs"
 	"github.com/twpayne/go-vfs/vfst"
-	"os"
-	"strings"
 )
 
 var _ = Describe("Utils", Label("utils"), func() {
@@ -181,29 +182,65 @@ var _ = Describe("Utils", Label("utils"), func() {
 		})
 	})
 	Describe("GetUkiCmdline", Label("GetUkiCmdline"), func() {
-		It("returns the default cmdline", func() {
-			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline[0]).To(Equal(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
+		var defaultCmdline string
+		BeforeEach(func() {
+			defaultCmdline = constants.UkiCmdline + " " + constants.UkiCmdlineInstall
 		})
+
+		It("returns the default cmdline", func() {
+			entries := utils.GetUkiCmdline()
+			Expect(entries[0].Cmdline).To(Equal(defaultCmdline))
+		})
+
 		It("returns the default cmdline with the cmdline flag and install-mode", func() {
 			viper.Set("extra-cmdline", []string{"key=value testkey"})
-			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
-			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
+			entries := utils.GetUkiCmdline()
+			cmdlines := []string{}
+			for _, entry := range entries {
+				cmdlines = append(cmdlines, entry.Cmdline)
+			}
+			Expect(cmdlines).To(ContainElements(defaultCmdline))
+			Expect(cmdlines).To(ContainElements(defaultCmdline + " key=value testkey"))
 		})
+
 		It("returns more than one cmdline with the cmdline flag if specified multiple values", func() {
 			viper.Set("extra-cmdline", []string{"key=value testkey", "another=value anotherkey"})
-			cmdline := utils.GetUkiCmdline()
+			entries := utils.GetUkiCmdline()
+			cmdlines := []string{}
+			for _, entry := range entries {
+				cmdlines = append(cmdlines, entry.Cmdline)
+			}
+
 			// Should contain the default one
-			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " " + constants.UkiCmdlineInstall))
+			Expect(cmdlines).To(ContainElements(defaultCmdline))
 			// Also the extra ones, without the install-mode
-			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " key=value testkey"))
-			Expect(cmdline).To(ContainElements(constants.UkiCmdline + " another=value anotherkey"))
+			Expect(cmdlines).To(ContainElements(defaultCmdline + " key=value testkey"))
+			Expect(cmdlines).To(ContainElements(defaultCmdline + " another=value anotherkey"))
 		})
+
 		It("expands the default cmdline if extended-cmdline is used", func() {
 			viper.Set("extend-cmdline", "key=value testkey")
-			cmdline := utils.GetUkiCmdline()
-			Expect(cmdline).To(ContainElement(constants.UkiCmdline + " " + constants.UkiCmdlineInstall + " key=value testkey"))
+			entries := utils.GetUkiCmdline()
+			for _, entry := range entries {
+				Expect(entry.Cmdline).To(MatchRegexp(".*key=value testkey"))
+			}
+		})
+	})
+
+	Describe("GetUkiSingleCmdlines", Label("GetUkiSingleCmdlines"), func() {
+		var defaultCmdline string
+		BeforeEach(func() {
+			defaultCmdline = constants.UkiCmdline + " " + constants.UkiCmdlineInstall
+		})
+
+		It("returns the specified entry", func() {
+			viper.Set("single-efi-cmdline", []string{"My Entry: key=value"})
+			viper.Set("boot-branding", "Kairos")
+
+			entries := utils.GetUkiSingleCmdlines(v1.NewNullLogger())
+			Expect(entries[0].Cmdline).To(MatchRegexp(defaultCmdline + "  key=value"))
+			Expect(entries[0].Title).To(ContainSubstring("Kairos (My Entry)"))
+			Expect(entries[0].FileName).To(Equal("My_Entry"))
 		})
 	})
 })

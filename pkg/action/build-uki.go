@@ -112,32 +112,16 @@ func (b *BuildUKIAction) Run() error {
 		return err
 	}
 
-	cmdlines := utils.GetUkiCmdline()
-	for _, cmdline := range cmdlines {
-		b.logger.Info("Running ukify for cmdline: " + cmdline)
-		efiName := nameFromCmdline(cmdline)
-		b.logger.Infof("Generating: " + efiName + ".efi")
-		if err := b.ukify(sourceDir, artifactsTempDir, cmdline, efiName+".efi"); err != nil {
+	entries := append(utils.GetUkiCmdline(), utils.GetUkiSingleCmdlines(b.logger)...)
+	for _, entry := range entries {
+		b.logger.Info(fmt.Sprintf("Running ukify for cmdline: %s: %s", entry.Title, entry.Cmdline))
+
+		b.logger.Infof("Generating: " + entry.FileName + ".efi")
+		if err := b.ukify(sourceDir, artifactsTempDir, entry.Cmdline, entry.FileName+".efi"); err != nil {
 			return err
 		}
 		b.logger.Info("Creating kairos and loader conf files")
-
-		if err := b.createConfFiles(sourceDir, cmdline, viper.GetString("boot-branding"), efiName); err != nil {
-			return err
-		}
-	}
-
-	singleCmdLines := utils.GetUkiSingleCmdlines(b.logger)
-	for bootEntry, cmdline := range singleCmdLines {
-		b.logger.Info("Running ukify for cmdline: " + cmdline)
-
-		fileName := strings.ReplaceAll(bootEntry, " ", "_")
-		b.logger.Infof("Generating: " + fileName + ".efi")
-		if err := b.ukify(sourceDir, artifactsTempDir, cmdline, fileName+".efi"); err != nil {
-			return err
-		}
-		b.logger.Info("Creating kairos and loader conf files")
-		if err := b.createConfFiles(sourceDir, cmdline, bootEntry, fileName); err != nil {
+		if err := b.createConfFiles(sourceDir, entry.Cmdline, entry.Title, entry.FileName); err != nil {
 			return err
 		}
 	}
@@ -198,7 +182,7 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 	} else {
 		// Get the generic efi file that we produce from the default cmdline
 		// This is the one name that has nothing added, just the version
-		finalEfiConf = nameFromCmdline(constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
+		finalEfiConf = utils.NameFromCmdline(constants.ArtifactBaseName, constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
 	}
 
 	secureBootEnroll := viper.GetString("secure-boot-enroll")
@@ -655,18 +639,10 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 			filepath.Join(b.keysDirectory, "db.auth")},
 	}
 	// Add the kairos efi files and the loader conf files for each cmdline
-	cmdlines := utils.GetUkiCmdline()
-	for _, cmdline := range cmdlines {
-		finalEfiName := nameFromCmdline(cmdline)
-		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, finalEfiName+".efi"))
-		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, finalEfiName+".conf"))
-	}
-
-	// Add the kairos efi files and the loader conf files for the "single" cmdlines
-	singleCmdLines := utils.GetUkiSingleCmdlines(b.logger)
-	for bootEntry := range singleCmdLines {
-		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, strings.ReplaceAll(bootEntry, " ", "_")+".efi"))
-		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, strings.ReplaceAll(bootEntry, " ", "_")+".conf"))
+	entries := append(utils.GetUkiCmdline(), utils.GetUkiSingleCmdlines(b.logger)...)
+	for _, entry := range entries {
+		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, entry.FileName+".efi"))
+		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, entry.FileName+".conf"))
 	}
 	b.logger.Debug(fmt.Sprintf("data: %s", litter.Sdump(data)))
 	return data, nil
@@ -857,33 +833,4 @@ func createImgDirs(imgFile string, filesMap map[string][]string) error {
 	}
 
 	return nil
-}
-
-// nameFromCmdline returns the name of the efi/conf file based on the cmdline
-// we want to have at least 1 efi file that its the default, that is the one we ship with the iso/media/whatever install medium
-// that one has the default cmdline + the install cmdline
-// For that one, we use it as the BASE one, configs will only trigger for that install stanza if we are on install media
-// so we dont have to worry about it, but we want to provide a clean name for it
-// so in that case we dont add anything to the efi name/conf name/cmdline inside the config
-// For the other ones, we add the cmdline to the efi name and the cmdline to the conf file
-// so you get
-// - norole.efi
-// - norole.conf
-// - norole_interactive-install.efi
-// - norole_interactive-install.conf
-// This is mostly for convenience in generating the names as the real data is stored in the config file
-// but it can easily be used to identify the efi file and the conf file.
-func nameFromCmdline(cmdline string) string {
-	// Remove the default cmdline from the current cmdline
-	cmdlineForEfi := strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
-	// For the default install entry, do not add anything on the efi name
-	if cmdlineForEfi == constants.UkiCmdlineInstall {
-		cmdlineForEfi = ""
-	}
-	// Change spaces to underscores
-	cleanCmdline := strings.ReplaceAll(cmdlineForEfi, " ", "_")
-	name := constants.ArtifactBaseName + "_" + cleanCmdline
-	// If the cmdline is empty, we remove the underscore as to not get a dangling one
-	finalName := strings.TrimSuffix(name, "_")
-	return finalName
 }
