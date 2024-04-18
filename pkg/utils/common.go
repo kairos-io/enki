@@ -21,6 +21,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+type BootEntry struct {
+	FileName string
+	Cmdline  string
+	Title    string
+}
+
 // CreateSquashFS creates a squash file at destination from a source, with options
 // TODO: Check validity of source maybe?
 func CreateSquashFS(runner v1.Runner, logger v1.Logger, source string, destination string, options []string) error {
@@ -58,40 +64,59 @@ func GolangArchToArch(arch string) (string, error) {
 // For each cmdline passed, we generate a uki file with that cmdline
 // extend-cmdline will just extend the default cmdline so we only create one efi file
 // extra-cmdline will create a new efi file for each cmdline passed
-func GetUkiCmdline() []string {
+func GetUkiCmdline() []BootEntry {
+	defaultCmdLine := constants.UkiCmdline + " " + constants.UkiCmdlineInstall
+
 	// Extend only
 	cmdlineExtend := viper.GetString("extend-cmdline")
 	if cmdlineExtend != "" {
-		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall + " " + cmdlineExtend}
+		cmdline := defaultCmdLine + " " + cmdlineExtend
+		return []BootEntry{{
+			Cmdline:  cmdline,
+			Title:    viper.GetString("boot-branding"),
+			FileName: NameFromCmdline(constants.ArtifactBaseName, cmdline),
+		}}
 	}
 
+	// default entry
+	result := []BootEntry{{
+		Cmdline:  defaultCmdLine,
+		Title:    viper.GetString("boot-branding"),
+		FileName: NameFromCmdline(constants.ArtifactBaseName, defaultCmdLine),
+	}}
+
 	// extra
-	cmdlineOverride := viper.GetStringSlice("extra-cmdline")
-	if len(cmdlineOverride) == 0 {
-		// For no extra cmdline, we default to install mode
-		return []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}
-	} else {
-		// For extra cmdline, we default to install mode + extra cmdlines
-		cmdline := []string{constants.UkiCmdline + " " + constants.UkiCmdlineInstall}
-		for _, line := range cmdlineOverride {
-			cmdline = append(cmdline, fmt.Sprintf("%s %s", constants.UkiCmdline, line))
-		}
-		return cmdline
+	for _, extra := range viper.GetStringSlice("extra-cmdline") {
+		cmdline := defaultCmdLine + " " + extra
+		result = append(result, BootEntry{
+			Cmdline:  cmdline,
+			Title:    viper.GetString("boot-branding"),
+			FileName: NameFromCmdline(constants.ArtifactBaseName, cmdline),
+		})
 	}
+
+	return result
 }
 
 // GetUkiSingleCmdlines returns the single-efi-cmdline as passed by the user.
-func GetUkiSingleCmdlines(logger v1.Logger) map[string]string {
-	result := map[string]string{}
+func GetUkiSingleCmdlines(logger v1.Logger) []BootEntry {
+	result := []BootEntry{}
 	// extra
 	cmdlines := viper.GetStringSlice("single-efi-cmdline")
 	for _, userValue := range cmdlines {
-		userSplitValues := strings.SplitN(userValue, ":", 2)
-		if len(userSplitValues) != 2 {
-			logger.Warnf("bad value for single-efi-cmdline: %s", userValue)
-			continue
+		bootEntry := BootEntry{}
+
+		before, after, hasTitle := strings.Cut(userValue, ":")
+		if hasTitle {
+			bootEntry.Title = fmt.Sprintf("%s (%s)", viper.GetString("boot-branding"), before)
+			bootEntry.Cmdline = after
+			bootEntry.FileName = strings.ReplaceAll(before, " ", "_")
+		} else {
+			bootEntry.Title = viper.GetString("boot-branding")
+			bootEntry.Cmdline = before
+			bootEntry.FileName = NameFromCmdline("single_entry", before)
 		}
-		result[userSplitValues[0]] = constants.UkiCmdline + " " + userSplitValues[1]
+		result = append(result, bootEntry)
 	}
 
 	return result
@@ -253,4 +278,33 @@ func IsAmd64(arch string) bool {
 
 func IsArm64(arch string) bool {
 	return arch == constants.ArchArm64 || arch == constants.Archaarch64
+}
+
+// NameFromCmdline returns the name of the efi/conf file based on the cmdline
+// we want to have at least 1 efi file that its the default, that is the one we ship with the iso/media/whatever install medium
+// that one has the default cmdline + the install cmdline
+// For that one, we use it as the BASE one, configs will only trigger for that install stanza if we are on install media
+// so we dont have to worry about it, but we want to provide a clean name for it
+// so in that case we dont add anything to the efi name/conf name/cmdline inside the config
+// For the other ones, we add the cmdline to the efi name and the cmdline to the conf file
+// so you get
+// - norole.efi
+// - norole.conf
+// - norole_interactive-install.efi
+// - norole_interactive-install.conf
+// This is mostly for convenience in generating the names as the real data is stored in the config file
+// but it can easily be used to identify the efi file and the conf file.
+func NameFromCmdline(basename, cmdline string) string {
+	// Remove the default cmdline from the current cmdline
+	cmdlineForEfi := strings.TrimSpace(strings.TrimPrefix(cmdline, constants.UkiCmdline))
+	// For the default install entry, do not add anything on the efi name
+	if cmdlineForEfi == constants.UkiCmdlineInstall {
+		cmdlineForEfi = ""
+	}
+	// Change spaces to underscores
+	cleanCmdline := strings.ReplaceAll(cmdlineForEfi, " ", "_")
+	name := basename + "_" + cleanCmdline
+	// If the cmdline is empty, we remove the underscore as to not get a dangling one
+	finalName := strings.TrimSuffix(name, "_")
+	return finalName
 }
