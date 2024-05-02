@@ -5,7 +5,7 @@ go 1.21
 replace github.com/google/go-tpm => github.com/google/go-tpm v0.3.2
 
 require (
-	github.com/containerd/containerd v1.7.13
+	github.com/containerd/containerd v1.7.16
 	github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2
 	github.com/foxboron/sbctl v0.0.0-20240222174813-e03264c0f4eb
 	github.com/gofrs/uuid v4.4.0+incompatible
@@ -71,7 +71,7 @@ require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/certificate-transparency-go v1.1.2 // indirect
 	github.com/google/go-attestation v0.3.3-0.20210901195502-505680f536da // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
@@ -156,9 +156,9 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.16.1 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20230711160842-782d3b101e98 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230731190214-cbb8c96f2d6d // indirect
 	google.golang.org/grpc v1.58.3 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/djherbis/times.v1 v1.3.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
