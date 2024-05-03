@@ -23,7 +23,7 @@ require (
 	github.com/spf13/viper v1.16.0
 	github.com/twpayne/go-vfs v1.7.2
 	github.com/u-root/u-root v0.12.0
-	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848
+	golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f
 )
 
 require (
