@@ -1,5 +1,5 @@
 # A docker images suitable to run `enki build-uki` in it
-ARG LUET_VERSION=0.35.0
+ARG LUET_VERSION=0.35.2
 
 FROM quay.io/luet/base:$LUET_VERSION AS luet
 
