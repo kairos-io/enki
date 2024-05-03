@@ -1,5 +1,5 @@
 ARG LUET_VERSION=0.35.2
-ARG GO_VERSION=1.21-alpine3.18
+ARG GO_VERSION=1.22-alpine3.18
 
 FROM quay.io/luet/base:$LUET_VERSION AS luet
 FROM golang:$GO_VERSION AS builder
