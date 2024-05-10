@@ -313,6 +313,8 @@ github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2 h1:qGlg/7H49H30Eu
 github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
 github.com/foxboron/sbctl v0.0.0-20240507180215-7d1c13a353e4 h1:chPG3eNepsJLTa0g2FYqmMZyW9lm+V+T6/ZFHCD4Ex4=
 github.com/foxboron/sbctl v0.0.0-20240507180215-7d1c13a353e4/go.mod h1:mBjn4epkRpgwzvfUk3+sE5fIKw5+8+BBS6w8PvBc38M=
+github.com/foxboron/sbctl v0.0.0-20240508204623-78476facea5e h1:WfJOGQBuzMbvwfuCO5QlhFN9MFmF4GNfEg6PZsTPYSc=
+github.com/foxboron/sbctl v0.0.0-20240508204623-78476facea5e/go.mod h1:mBjn4epkRpgwzvfUk3+sE5fIKw5+8+BBS6w8PvBc38M=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
 github.com/franela/goreq v0.0.0-20171204163338-bcd34c9993f8/go.mod h1:ZhphrRTfi2rbfLwlschooIH4+wKKDR4Pdxhh+TRoA20=
 github.com/frankban/quicktest v1.13.0/go.mod h1:qLE0fzW0VuyUAJgPU19zByoIr0HtCHN/r/VLSOOIySU=
