@@ -534,7 +534,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	isoName := fmt.Sprintf("kairos_%s.iso", b.version)
 
 	b.logger.Info("Creating the iso files with xorriso")
-	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL",
+	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL", "-isohybrid-gpt-basdat",
 		"-e", filepath.Base(imgFile), "-no-emul-boot", "-o", filepath.Join(b.outputDir, isoName), isoDir)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
