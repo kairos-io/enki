@@ -146,7 +146,15 @@ func init() {
 
 func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir string) error {
 	// Prepare all the keys we need
-	key, err := fs.ReadFile(filepath.Join(keyPath, keyType+".key"))
+	var err error
+	var key []byte
+
+	switch keyType {
+	case "PK", "KEK": // PK signs itself and KEK
+		key, err = fs.ReadFile(filepath.Join(keyPath, "PK.key"))
+	case "db": // KEK signs db
+		key, err = fs.ReadFile(filepath.Join(keyPath, "KEK.key"))
+	}
 	if err != nil {
 		return fmt.Errorf("reading the key file %w", err)
 	}
