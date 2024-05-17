@@ -73,7 +73,7 @@ func NewGenkeyCmd() *cobra.Command {
 				der := filepath.Join(output, fmt.Sprintf("%s.der", keyType))
 
 				args := []string{
-					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s/", name),
+					"req", "-nodes", "-x509", "-subj", fmt.Sprintf("/CN=%s-%s/", name, keyType),
 					"-keyout", key,
 					"-out", pem,
 				}
