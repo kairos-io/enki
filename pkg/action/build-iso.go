@@ -99,7 +99,7 @@ func (b *BuildISOAction) ISORun() (err error) {
 	b.cfg.Logger.Infof("Creating ISO image...")
 	err = b.burnISO(isoDir)
 	if err != nil {
-		b.cfg.Logger.Errorf("Failed preparing ISO's root tree: %v", err)
+		b.cfg.Logger.Errorf("Failed creating ISO image: %v", err)
 		return err
 	}
 
