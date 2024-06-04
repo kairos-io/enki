@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -303,8 +304,10 @@ func NameFromCmdline(basename, cmdline string) string {
 	if cmdlineForEfi == constants.UkiCmdlineInstall {
 		cmdlineForEfi = ""
 	}
-	// Change spaces to underscores
-	cleanCmdline := strings.ReplaceAll(cmdlineForEfi, " ", "_")
+	// Although only slashes are truly forbidden, we also replace other characters,
+	// as they can be problematic when interpreted by the shell (e.g. &, |, etc.)
+	allowedChars := regexp.MustCompile(`[^a-zA-Z0-9._-]+`)
+	cleanCmdline := allowedChars.ReplaceAllString(cmdlineForEfi, "_")
 	name := basename + "_" + cleanCmdline
 	// If the cmdline is empty, we remove the underscore as to not get a dangling one
 	finalName := strings.TrimSuffix(name, "_")
