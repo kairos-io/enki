@@ -23,7 +23,7 @@ func NewBuildUKICmd() *cobra.Command {
 		Long: "Build a UKI artifact from a container image\n\n" +
 			"SourceImage - should be provided as uri in following format <sourceType>:<sourceName>\n" +
 			"    * <sourceType> - might be [\"dir\", \"file\", \"oci\", \"docker\"], as default is \"docker\"\n" +
-			"    * <sourceName> - is path to file or directory, image name with tag version" +
+			"    * <sourceName> - is path to file or directory, image name with tag version\n" +
 			"The following files are expected inside the keys directory:\n" +
 			"    - DB.crt\n" +
 			"    - DB.der\n" +
