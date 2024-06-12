@@ -138,6 +138,7 @@ func NewBuildUKICmd() *cobra.Command {
 		},
 	}
 
+	c.Flags().StringP("name", "n", "", "Basename of the generated artifact (ignored for uki output type)")
 	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
 	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	c.Flags().StringP("overlay-rootfs", "o", "", "Dir with files to be applied to the system rootfs.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")

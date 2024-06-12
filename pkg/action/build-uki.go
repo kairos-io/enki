@@ -34,6 +34,7 @@ type BuildUKIAction struct {
 	outputType    string
 	version       string
 	arch          string
+	name          string
 }
 
 func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, outputType string) *BuildUKIAction {
@@ -45,6 +46,7 @@ func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, k
 		keysDirectory: keysDirectory,
 		outputType:    outputType,
 		arch:          cfg.Arch,
+		name:          cfg.Name,
 	}
 	b.logger.Debugf("BuildUKIAction: %+v", litter.Sdump(b))
 	return b
@@ -532,6 +534,9 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	}
 
 	isoName := fmt.Sprintf("kairos_%s.iso", b.version)
+	if b.name != "" {
+		isoName = fmt.Sprintf("%s.iso", b.name)
+	}
 
 	b.logger.Info("Creating the iso files with xorriso")
 	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL", "-isohybrid-gpt-basdat",
@@ -561,7 +566,11 @@ func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
 	arch := "amd64"
 	os := "linux"
 	// Build imageTar from normal tar
-	err = utils.CreateTar(b.logger, temp.Name(), finalImage, fmt.Sprintf("kairos_uki:%s", version), arch, os)
+	tarName := fmt.Sprintf("kairos_uki_%s.tar", version)
+	if b.name != "" {
+		tarName = fmt.Sprintf("%s.tar", b.name)
+	}
+	err = utils.CreateTar(b.logger, temp.Name(), finalImage, tarName, arch, os)
 	if err != nil {
 		return err
 	}
