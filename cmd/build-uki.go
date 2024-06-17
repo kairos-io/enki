@@ -23,7 +23,7 @@ func NewBuildUKICmd() *cobra.Command {
 		Long: "Build a UKI artifact from a container image\n\n" +
 			"SourceImage - should be provided as uri in following format <sourceType>:<sourceName>\n" +
 			"    * <sourceType> - might be [\"dir\", \"file\", \"oci\", \"docker\"], as default is \"docker\"\n" +
-			"    * <sourceName> - is path to file or directory, image name with tag version" +
+			"    * <sourceName> - is path to file or directory, image name with tag version\n" +
 			"The following files are expected inside the keys directory:\n" +
 			"    - DB.crt\n" +
 			"    - DB.der\n" +
@@ -138,6 +138,7 @@ func NewBuildUKICmd() *cobra.Command {
 		},
 	}
 
+	c.Flags().StringP("name", "n", "", "Basename of the generated artifact (ignored for uki output type)")
 	c.Flags().StringP("output-dir", "d", ".", "Output dir for artifact")
 	c.Flags().StringP("output-type", "t", string(constants.DefaultOutput), fmt.Sprintf("Artifact output type [%s]", strings.Join(constants.OutPutTypes(), ", ")))
 	c.Flags().StringP("overlay-rootfs", "o", "", "Dir with files to be applied to the system rootfs.\nAll the files under this dir will be copied into the rootfs of the uki respecting the directory structure under the dir.")
