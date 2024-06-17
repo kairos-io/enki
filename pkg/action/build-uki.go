@@ -23,6 +23,9 @@ import (
 	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+
+	"github.com/itxaka/go-ukify/pkg/pesign"
+	"github.com/itxaka/go-ukify/pkg/uki"
 )
 
 type BuildUKIAction struct {
@@ -119,9 +122,62 @@ func (b *BuildUKIAction) Run() error {
 		b.logger.Info(fmt.Sprintf("Running ukify for cmdline: %s: %s", entry.Title, entry.Cmdline))
 
 		b.logger.Infof("Generating: " + entry.FileName + ".efi")
-		if err := b.ukify(sourceDir, artifactsTempDir, entry.Cmdline, entry.FileName+".efi"); err != nil {
+
+		// New ukifier
+		// Create PCR Signer
+		signer, err := pesign.NewPCRSigner(filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"))
+		if err != nil {
 			return err
 		}
+		// Create SecureBoot signer
+		sbSigner, err := pesign.NewSecureBootSigner(
+			filepath.Join(b.keysDirectory, "db.pem"),
+			filepath.Join(b.keysDirectory, "db.key"))
+		if err != nil {
+			return err
+		}
+		// Create Builder instance
+		stub, err := b.getEfiStub()
+		if err != nil {
+			return err
+		}
+		// Get systemd-boot info (we can sign it at the same time)
+		var systemdBoot string
+		var outputSystemdBootEfi string
+		if utils.IsAmd64(b.arch) {
+			systemdBoot = constants.UkiSystemdBootx86
+			outputSystemdBootEfi = constants.EfiFallbackNamex86
+		} else if utils.IsArm64(b.arch) {
+			systemdBoot = constants.UkiSystemdBootArm
+			outputSystemdBootEfi = constants.EfiFallbackNameArm
+		} else {
+			return fmt.Errorf("unsupported arch: %s", b.arch)
+		}
+
+		builder := &uki.Builder{
+			Arch:             b.arch,
+			Version:          b.version,
+			SdStubPath:       stub,
+			KernelPath:       filepath.Join(artifactsTempDir, "vmlinuz"),
+			InitrdPath:       filepath.Join(artifactsTempDir, "initrd"),
+			Cmdline:          entry.Cmdline,
+			OsRelease:        filepath.Join(sourceDir, "etc/os-release"),
+			OutUKIPath:       entry.FileName + ".efi",
+			PCRSigner:        signer,
+			SecureBootSigner: sbSigner,
+			SdBootPath:       systemdBoot,
+			OutSdBootPath:    outputSystemdBootEfi,
+			LogLevel:         b.logger.GetLevel().String(),
+		}
+
+		if err := os.Chdir(sourceDir); err != nil {
+			return fmt.Errorf("changing to %s directory: %w", sourceDir, err)
+		}
+
+		if err := builder.Build(); err != nil {
+			return err
+		}
+
 		b.logger.Info("Creating kairos and loader conf files")
 		if err := b.createConfFiles(sourceDir, entry.Cmdline, entry.Title, entry.FileName); err != nil {
 			return err
@@ -130,11 +186,6 @@ func (b *BuildUKIAction) Run() error {
 
 	err = b.createSystemdConf(sourceDir)
 	if err != nil {
-		return err
-	}
-
-	b.logger.Info("Signing artifacts")
-	if err := b.sbSign(sourceDir); err != nil {
 		return err
 	}
 
