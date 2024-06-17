@@ -3,6 +3,8 @@ module github.com/kairos-io/enki
 go 1.22.1
 
 
+replace github.com/itxaka/go-ukify => ../go-secureboot
+
 require (
 	github.com/containerd/containerd v1.7.16
 	github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2
