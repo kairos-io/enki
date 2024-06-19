@@ -367,11 +367,10 @@ func (b *BuildUKIAction) createInitramfs(sourceDir, artifactsTempDir string) err
 		if err != nil {
 			return fmt.Errorf("getting record of %q failed: %w", filePath, err)
 		}
-
 		if rec.Name != strings.TrimPrefix(rec.Name, sourceDir) {
 			rec.Name = strings.TrimPrefix(rec.Name, sourceDir)
 		}
-
+		
 		if err := rw.WriteRecord(cpio.MakeReproducible(rec)); err != nil {
 			return fmt.Errorf("writing record %q failed: %w", filePath, err)
 		}
