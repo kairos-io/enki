@@ -123,12 +123,7 @@ func (b *BuildUKIAction) Run() error {
 
 		b.logger.Infof("Generating: " + entry.FileName + ".efi")
 
-		// New ukifier
-		// Create PCR Signer
-		signer, err := pesign.NewPCRSigner(filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"))
-		if err != nil {
-			return err
-		}
+		// New ukifier !!
 		// Create SecureBoot signer
 		sbSigner, err := pesign.NewSecureBootSigner(
 			filepath.Join(b.keysDirectory, "db.pem"),
@@ -163,7 +158,7 @@ func (b *BuildUKIAction) Run() error {
 			Cmdline:          entry.Cmdline,
 			OsRelease:        filepath.Join(sourceDir, "etc/os-release"),
 			OutUKIPath:       entry.FileName + ".efi",
-			PCRSigner:        signer,
+			PCRKey:           filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
 			SecureBootSigner: sbSigner,
 			SdBootPath:       systemdBoot,
 			OutSdBootPath:    outputSystemdBootEfi,
