@@ -2,15 +2,12 @@ module github.com/kairos-io/enki
 
 go 1.22.1
 
-
-replace github.com/itxaka/go-ukify => ../go-secureboot
-
 require (
 	github.com/containerd/containerd v1.7.16
 	github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2
 	github.com/foxboron/sbctl v0.0.0-20240508204623-78476facea5e
 	github.com/google/go-containerregistry v0.17.0
-	github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240617141231-c5f568882347
+	github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240619145602-b000d3df662a
 	github.com/kairos-io/kairos-agent/v2 v2.7.13
 	github.com/kairos-io/kairos-sdk v0.0.25
 	github.com/klauspost/compress v1.17.8

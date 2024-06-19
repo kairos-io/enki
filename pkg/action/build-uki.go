@@ -24,7 +24,6 @@ import (
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 
-	"github.com/itxaka/go-ukify/pkg/pesign"
 	"github.com/itxaka/go-ukify/pkg/uki"
 )
 
@@ -124,13 +123,6 @@ func (b *BuildUKIAction) Run() error {
 		b.logger.Infof("Generating: " + entry.FileName + ".efi")
 
 		// New ukifier !!
-		// Create SecureBoot signer
-		sbSigner, err := pesign.NewSecureBootSigner(
-			filepath.Join(b.keysDirectory, "db.pem"),
-			filepath.Join(b.keysDirectory, "db.key"))
-		if err != nil {
-			return err
-		}
 		// Create Builder instance
 		stub, err := b.getEfiStub()
 		if err != nil {
@@ -150,19 +142,20 @@ func (b *BuildUKIAction) Run() error {
 		}
 
 		builder := &uki.Builder{
-			Arch:             b.arch,
-			Version:          b.version,
-			SdStubPath:       stub,
-			KernelPath:       filepath.Join(artifactsTempDir, "vmlinuz"),
-			InitrdPath:       filepath.Join(artifactsTempDir, "initrd"),
-			Cmdline:          entry.Cmdline,
-			OsRelease:        filepath.Join(sourceDir, "etc/os-release"),
-			OutUKIPath:       entry.FileName + ".efi",
-			PCRKey:           filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
-			SecureBootSigner: sbSigner,
-			SdBootPath:       systemdBoot,
-			OutSdBootPath:    outputSystemdBootEfi,
-			LogLevel:         b.logger.GetLevel().String(),
+			Arch:          b.arch,
+			Version:       b.version,
+			SdStubPath:    stub,
+			KernelPath:    filepath.Join(artifactsTempDir, "vmlinuz"),
+			InitrdPath:    filepath.Join(artifactsTempDir, "initrd"),
+			Cmdline:       entry.Cmdline,
+			OsRelease:     filepath.Join(sourceDir, "etc/os-release"),
+			OutUKIPath:    entry.FileName + ".efi",
+			PCRKey:        filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
+			SBKey:         filepath.Join(b.keysDirectory, "db.key"),
+			SBCert:        filepath.Join(b.keysDirectory, "db.pem"),
+			SdBootPath:    systemdBoot,
+			OutSdBootPath: outputSystemdBootEfi,
+			LogLevel:      b.logger.GetLevel().String(),
 		}
 
 		if err := os.Chdir(sourceDir); err != nil {

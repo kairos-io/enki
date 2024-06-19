@@ -597,6 +597,8 @@ github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240617130648-998271a5b766/go.mod h1
 github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240617134553-a5ea932c7630 h1:n6tv6R0RmneZqZZrKT8ackiG4upSGODW/NZUiYrBNh8=
 github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240617134553-a5ea932c7630/go.mod h1:bJ0v1lb0tSL34iIymEicFc3dFJBZzro5wM7+BuuWJn0=
 github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240617141231-c5f568882347/go.mod h1:bJ0v1lb0tSL34iIymEicFc3dFJBZzro5wM7+BuuWJn0=
+github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240619145602-b000d3df662a h1:O7bh166qyPX/WA6F07JKtCJIkbta0V2tRAdk8qWqsHg=
+github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240619145602-b000d3df662a/go.mod h1:AclEiOTvax9zp7cnFQ2pvVl2ZpFLT6p2cJuErFhEzJ4=
 github.com/jarcoal/httpmock v1.0.5/go.mod h1:ATjnClrvW/3tijVmpL/va5Z3aAyGvqU3gCT8nX0Txik=
 github.com/jaypipes/ghw v0.12.0 h1:xU2/MDJfWmBhJnujHY9qwXQLs3DBsf0/Xa9vECY0Tho=
 github.com/jaypipes/ghw v0.12.0/go.mod h1:jeJGbkRB2lL3/gxYzNYzEDETV1ZJ56OKr+CSeSEym+g=
