@@ -1,7 +1,6 @@
 package action
 
 import (
-	"compress/gzip"
 	"fmt"
 	"io"
 	"math"
@@ -237,6 +236,7 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 }
 
 func (b *BuildUKIAction) extractImage() (string, error) {
+	// TODO: if b.img is a dir, we should not copy or rsync anything and just use that dir as source?
 	tmpDir, err := os.MkdirTemp("", "enki-build-uki-")
 	if err != nil {
 		return tmpDir, err
@@ -255,8 +255,6 @@ func (b *BuildUKIAction) extractImage() (string, error) {
 
 func (b *BuildUKIAction) checkDeps() error {
 	neededBinaries := []string{
-		"/usr/lib/systemd/ukify",
-		"sbsign",
 		"dd",
 		"mkfs.msdos",
 		"mmd",
@@ -360,10 +358,12 @@ func (b *BuildUKIAction) createInitramfs(sourceDir, artifactsTempDir string) err
 		if err != nil {
 			return fmt.Errorf("getting record of %q failed: %w", filePath, err)
 		}
-		if rec.Name != strings.TrimPrefix(rec.Name, sourceDir) {
-			rec.Name = strings.TrimPrefix(rec.Name, sourceDir)
-		}
-		
+
+		// In case the record contains the sourceDir we want to remove it as its not part of the cpio initramfs
+		// All files should have the proper path for the initramfs so SOURCEDIR/usr/bin needs to be stored as /usr/bin
+		// in the cpio image
+		rec.Name = strings.TrimPrefix(rec.Name, sourceDir)
+
 		if err := rw.WriteRecord(cpio.MakeReproducible(rec)); err != nil {
 			return fmt.Errorf("writing record %q failed: %w", filePath, err)
 		}
@@ -377,6 +377,8 @@ func (b *BuildUKIAction) createInitramfs(sourceDir, artifactsTempDir string) err
 	if err := cpio.WriteTrailer(rw); err != nil {
 		return fmt.Errorf("error writing trailer record: %w", err)
 	}
+
+	b.logger.Info("Compressing initramfs")
 
 	if err := ZstdFile(cpioFileName, filepath.Join(artifactsTempDir, "initrd")); err != nil {
 		return err
@@ -411,79 +413,6 @@ func (b *BuildUKIAction) copyKernel(sourceDir, targetDir string) error {
 	_, err = io.Copy(destinationFile, sourceFile)
 
 	return err
-}
-
-func (b *BuildUKIAction) ukify(sourceDir, artifactsTempDir, cmdline, finalEfiName string) error {
-	// Normally that's still the current dir but just making sure.
-	if err := os.Chdir(sourceDir); err != nil {
-		return fmt.Errorf("changing to %s directory: %w", sourceDir, err)
-	}
-
-	stubFile, err := b.getEfiStub()
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("/usr/lib/systemd/ukify",
-		"--linux", filepath.Join(artifactsTempDir, "vmlinuz"),
-		"--initrd", filepath.Join(artifactsTempDir, "initrd"),
-		"--cmdline", cmdline,
-		"--os-release", fmt.Sprintf("@%s", "etc/os-release"),
-		"--stub", stubFile,
-		"--secureboot-private-key", filepath.Join(b.keysDirectory, "db.key"),
-		"--secureboot-certificate", filepath.Join(b.keysDirectory, "db.pem"),
-		"--pcr-private-key", filepath.Join(b.keysDirectory, "tpm2-pcr-private.pem"),
-		"--measure",
-		"--output", finalEfiName,
-		"build",
-	)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("running ukify: %w\n%s", err, string(out))
-	}
-
-	b.logger.Debugf("ukify output: %s", string(out))
-
-	// check size of the efi file
-	fi, err := os.Stat(finalEfiName)
-	if err != nil {
-		return fmt.Errorf("getting file info for %s: %w", finalEfiName, err)
-	}
-	if sizeLimit := viper.GetInt64("efi-size-warn"); fi.Size() > sizeLimit*1024*1024 {
-		b.logger.Warnf("EFI file %s is larger than %d bytes", finalEfiName, sizeLimit)
-	}
-
-	return nil
-}
-
-// TODO: the efi file should come from the downloaded image, not from the
-// enki running OS.
-func (b *BuildUKIAction) sbSign(sourceDir string) error {
-	var systemdBoot string
-	var outputEfi string
-	if utils.IsAmd64(b.arch) {
-		systemdBoot = constants.UkiSystemdBootx86
-		outputEfi = constants.EfiFallbackNamex86
-	} else if utils.IsArm64(b.arch) {
-		systemdBoot = constants.UkiSystemdBootArm
-		outputEfi = constants.EfiFallbackNameArm
-	} else {
-		return fmt.Errorf("unsupported arch: %s", b.arch)
-	}
-
-	cmd := exec.Command("sbsign",
-		"--key", filepath.Join(b.keysDirectory, "db.key"),
-		"--cert", filepath.Join(b.keysDirectory, "db.pem"),
-		"--output", filepath.Join(sourceDir, outputEfi),
-		systemdBoot,
-	)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("running sbsign: %w\n%s", err, string(out))
-	}
-	return nil
 }
 
 func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline, title, finalEfiName string) error {
@@ -694,7 +623,6 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, entry.FileName+".efi"))
 		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, entry.FileName+".conf"))
 	}
-	b.logger.Debug(fmt.Sprintf("data: %s", litter.Sdump(data)))
 	return data, nil
 }
 
@@ -752,6 +680,7 @@ func (b *BuildUKIAction) cleanSource(dir string) {
 		b.logger.Errorf("removing boot dir: %s", err)
 		return
 	}
+	// TODO: there should be a copy of the kernel at /usrt/lib/modules/VERSION/kernel/vmlinuz that we may also want to remove
 }
 
 func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
@@ -763,29 +692,6 @@ func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
 				return fmt.Errorf("copying %s in img file: %w\n%s", f, err, string(out))
 			}
 		}
-	}
-
-	return nil
-}
-
-func GzipFile(sourcePath, targetPath string) error {
-	inputFile, err := os.Open(sourcePath)
-	if err != nil {
-		return fmt.Errorf("error opening initramfs file: %w", err)
-	}
-	defer inputFile.Close()
-
-	outputFile, err := os.Create(targetPath)
-	if err != nil {
-		return fmt.Errorf("error creating compressed initramfs file: %w", err)
-	}
-	defer outputFile.Close()
-
-	gzipWriter := gzip.NewWriter(outputFile)
-	defer gzipWriter.Close()
-
-	if _, err = io.Copy(gzipWriter, inputFile); err != nil {
-		return fmt.Errorf("error writing data to the compress initramfs file: %w", err)
 	}
 
 	return nil
