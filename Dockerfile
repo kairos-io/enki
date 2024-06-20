@@ -21,7 +21,7 @@ RUN go build \
     -o /enki
 
 # specify the fedora version, otherwise we migth get beta versions!
-FROM fedora:40 as tools-image
+FROM fedora:41 as tools-image
 COPY --from=luet /usr/bin/luet /usr/bin/luet
 ENV LUET_NOLOCK=true
 ENV TMPDIR=/tmp
