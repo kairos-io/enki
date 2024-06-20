@@ -7,7 +7,7 @@ require (
 	github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2
 	github.com/foxboron/sbctl v0.0.0-20240508204623-78476facea5e
 	github.com/google/go-containerregistry v0.17.0
-	github.com/itxaka/go-ukify v0.0.1-alpha3.0.20240619145602-b000d3df662a
+	github.com/kairos-io/go-ukify v0.1.1
 	github.com/kairos-io/kairos-agent/v2 v2.7.13
 	github.com/kairos-io/kairos-sdk v0.0.25
 	github.com/klauspost/compress v1.17.8
@@ -66,7 +66,6 @@ require (
 	github.com/go-git/go-git/v5 v5.4.2 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
@@ -125,8 +124,6 @@ require (
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/samber/lo v1.38.1 // indirect
-	github.com/samber/slog-common v0.16.0 // indirect
-	github.com/samber/slog-zerolog/v2 v2.3.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
@@ -136,7 +133,6 @@ require (
 	github.com/spectrocloud-labs/herd v0.4.2 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
 	github.com/spf13/cast v1.6.0 // indirect
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/swaggest/jsonschema-go v0.3.62 // indirect
 	github.com/swaggest/refl v1.3.0 // indirect
@@ -161,7 +157,6 @@ require (
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/term v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
-	golang.org/x/time v0.5.0 // indirect
 	golang.org/x/tools v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20231120223509-83a465c0220f // indirect
 	google.golang.org/grpc v1.59.0 // indirect

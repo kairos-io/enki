@@ -20,10 +20,9 @@ import (
 
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
+	"github.com/kairos-io/go-ukify/pkg/uki"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
-
-	"github.com/itxaka/go-ukify/pkg/uki"
 )
 
 type BuildUKIAction struct {
