@@ -18,4 +18,4 @@ RUN cp /tmp/luet-${TARGETARCH}.yaml /etc/luet/luet.yaml
 ## We can install both arches, as the artifacts are named differently
 RUN luet install --config /tmp/luet-amd64.yaml -y system/systemd-boot
 RUN luet install --config /tmp/luet-arm64.yaml -y system/systemd-boot
-RUN dnf install -y binutils systemd-boot mtools efitools sbsigntools shim openssl systemd-ukify dosfstools mtools xorriso
+RUN dnf install -y binutils mtools efitools shim openssl dosfstools mtools xorriso
