@@ -1,5 +1,5 @@
 ARG LUET_VERSION=0.35.2
-ARG GO_VERSION=1.21-alpine3.18
+ARG GO_VERSION=1.22-alpine
 
 FROM quay.io/luet/base:$LUET_VERSION AS luet
 FROM golang:$GO_VERSION AS builder
@@ -20,7 +20,8 @@ RUN go build \
     -X github.com/kairos-io/enki/internal/version.gitCommit=$ENKI_COMMIT" \
     -o /enki
 
-FROM fedora as tools-image
+# specify the fedora version, otherwise we migth get beta versions!
+FROM fedora:40 as tools-image
 COPY --from=luet /usr/bin/luet /usr/bin/luet
 ENV LUET_NOLOCK=true
 ENV TMPDIR=/tmp
@@ -36,7 +37,7 @@ RUN cp /tmp/luet-${TARGETARCH}.yaml /etc/luet/luet.yaml
 RUN luet install --config /tmp/luet-amd64.yaml -y system/systemd-boot
 RUN luet install --config /tmp/luet-arm64.yaml -y system/systemd-boot
 
-RUN dnf install -y binutils systemd-boot mtools efitools sbsigntools shim openssl systemd-ukify dosfstools xorriso rsync
+RUN dnf install -y binutils mtools efitools shim openssl dosfstools xorriso rsync
 
 COPY --from=builder /enki /enki
 
