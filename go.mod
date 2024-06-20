@@ -4,8 +4,8 @@ go 1.22.1
 
 require (
 	github.com/containerd/containerd v1.7.16
-	github.com/foxboron/go-uefi v0.0.0-20240128152106-48be911532c2
-	github.com/foxboron/sbctl v0.0.0-20240508204623-78476facea5e
+	github.com/foxboron/go-uefi v0.0.0-20240516213015-35289af04a75
+	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.17.0
 	github.com/kairos-io/go-ukify v0.1.1
 	github.com/kairos-io/kairos-agent/v2 v2.7.13
