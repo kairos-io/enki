@@ -17,6 +17,7 @@ import (
 
 	"github.com/foxboron/go-uefi/efi/signature"
 	efiutil "github.com/foxboron/go-uefi/efi/util"
+	"github.com/foxboron/go-uefi/efivar"
 	"github.com/foxboron/sbctl"
 	"github.com/foxboron/sbctl/certs"
 	"github.com/foxboron/sbctl/fs"
@@ -187,7 +188,19 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir s
 		sigdb.AppendDatabase(customSigDb)
 	}
 
-	signedDB, err := sbctl.SignDatabase(sigdb, key, pem, keyType)
+	var efiVarType efivar.Efivar
+	switch strings.ToLower(keyType) {
+	case "pk":
+		efiVarType = efivar.PK
+	case "kek":
+		efiVarType = efivar.KEK
+	case "db":
+		efiVarType = efivar.Db
+	default:
+		return fmt.Errorf("unsupported key type %s", keyType)
+	}
+
+	signedDB, err := sbctl.SignDatabase(sigdb, key, pem, efiVarType)
 	if err != nil {
 		return fmt.Errorf("creating the signed db: %w", err)
 	}
