@@ -3,6 +3,7 @@ package action
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"math"
 	"os"
 	"os/exec"
@@ -139,6 +140,9 @@ func (b *BuildUKIAction) Run() error {
 			return fmt.Errorf("unsupported arch: %s", b.arch)
 		}
 
+		if b.logger.GetLevel().String() == "debug" {
+			slog.SetLogLoggerLevel(slog.LevelDebug)
+		}
 		builder := &uki.Builder{
 			Arch:          b.arch,
 			Version:       b.version,
@@ -153,7 +157,6 @@ func (b *BuildUKIAction) Run() error {
 			SBCert:        filepath.Join(b.keysDirectory, "db.pem"),
 			SdBootPath:    systemdBoot,
 			OutSdBootPath: outputSystemdBootEfi,
-			LogLevel:      b.logger.GetLevel().String(),
 		}
 
 		if err := os.Chdir(sourceDir); err != nil {
