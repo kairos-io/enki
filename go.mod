@@ -5,7 +5,7 @@ go 1.22.1
 require (
 	github.com/containerd/containerd v1.7.16
 	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
-	github.com/foxboron/sbctl v0.0.0-20240508204623-78476facea5e
+	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.17.0
 	github.com/kairos-io/go-ukify v0.2.0
 	github.com/kairos-io/kairos-agent/v2 v2.7.13
@@ -128,7 +128,6 @@ require (
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b // indirect
 	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
-	github.com/siderolabs/gen v0.4.8 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spectrocloud-labs/herd v0.4.2 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
