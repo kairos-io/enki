@@ -10,7 +10,7 @@ require (
 	github.com/kairos-io/go-ukify v0.2.0
 	github.com/kairos-io/kairos-agent/v2 v2.7.13
 	github.com/kairos-io/kairos-sdk v0.0.25
-	github.com/klauspost/compress v1.17.8
+	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
