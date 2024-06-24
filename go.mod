@@ -3,7 +3,7 @@ module github.com/kairos-io/enki
 go 1.22.1
 
 require (
-	github.com/containerd/containerd v1.7.16
+	github.com/containerd/containerd v1.7.18
 	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.17.0
@@ -31,8 +31,8 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.1 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
-	github.com/Microsoft/go-winio v0.6.1 // indirect
-	github.com/Microsoft/hcsshim v0.11.4 // indirect
+	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/Microsoft/hcsshim v0.11.5 // indirect
 	github.com/ProtonMail/go-crypto v0.0.0-20230117203413-a47887b8f098 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/acomagu/bufpipe v1.0.3 // indirect
@@ -44,6 +44,7 @@ require (
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/console v1.0.4-0.20230706203907-8f6c4e4faef5 // indirect
 	github.com/containerd/continuity v0.4.2 // indirect
+	github.com/containerd/errdefs v0.1.0 // indirect
 	github.com/containerd/log v0.1.0 // indirect
 	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
@@ -108,7 +109,7 @@ require (
 	github.com/mudler/yip v1.4.6 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/image-spec v1.1.0-rc3 // indirect
+	github.com/opencontainers/image-spec v1.1.0 // indirect
 	github.com/packethost/packngo v0.29.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/phayes/permbits v0.0.0-20190612203442-39d7c581d2ee // indirect
