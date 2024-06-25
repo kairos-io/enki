@@ -7,7 +7,7 @@ require (
 	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.17.0
-	github.com/kairos-io/go-ukify v0.2.0
+	github.com/kairos-io/go-ukify v0.2.2
 	github.com/kairos-io/kairos-agent/v2 v2.7.13
 	github.com/kairos-io/kairos-sdk v0.0.25
 	github.com/klauspost/compress v1.17.8
