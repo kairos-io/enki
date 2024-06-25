@@ -623,6 +623,8 @@ github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7V
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
 github.com/kairos-io/go-ukify v0.2.0 h1:yxVUNe5uarEv7ytj5M99chfxJlIhtxkP7hTff1CZmNs=
 github.com/kairos-io/go-ukify v0.2.0/go.mod h1:AgMOguzoI9hYZFYA6XA24fEhxY8Tq+7mHKovA3jsTys=
+github.com/kairos-io/go-ukify v0.2.2 h1:gY3iFcula7BnZHH23fvJv91SFhdqvrTb+xhbxSjF9Fo=
+github.com/kairos-io/go-ukify v0.2.2/go.mod h1:AgMOguzoI9hYZFYA6XA24fEhxY8Tq+7mHKovA3jsTys=
 github.com/kairos-io/kairos-agent/v2 v2.7.13 h1:x3y2hsSgldS2le/DSD4cePY4dbG+/wdvaA4Xw2EtuCM=
 github.com/kairos-io/kairos-agent/v2 v2.7.13/go.mod h1:HmL/3Nhmz1o1LnoHbiGlzqqbdsb1VPC5NuGnIG2Qtw8=
 github.com/kairos-io/kairos-sdk v0.0.25 h1:/wQ8lHmmqJgKPaxzLllTgMQNWRje80XKdj8F0XlFXl0=
