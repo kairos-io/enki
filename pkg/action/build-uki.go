@@ -366,7 +366,18 @@ func (b *BuildUKIAction) createInitramfs(sourceDir, artifactsTempDir string) err
 		// in the cpio image
 		rec.Name = strings.TrimPrefix(rec.Name, sourceDir)
 
-		if err := rw.WriteRecord(cpio.MakeReproducible(rec)); err != nil {
+		// MakeReproducible is not working as expected so we canno use it yet
+		// as that breaks hardlinks
+		// See upstream https://github.com/u-root/u-root/issues/3031
+		// When its fixed we should use rw.WriteRecord(cpio.MakeReproducible(rec)) to generate reproducible initrds
+		// Meanwhile we can try to make it as reproducible as possible
+		rec.MTime = 0
+		rec.UID = 0
+		rec.GID = 0
+		rec.Dev = 0
+		rec.Major = 0
+		rec.Minor = 0
+		if err := rw.WriteRecord(rec); err != nil {
 			return fmt.Errorf("writing record %q failed: %w", filePath, err)
 		}
 
