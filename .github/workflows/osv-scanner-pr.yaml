@@ -6,12 +6,16 @@ on:
     branches: [main]
   merge_group:
     branches: [main]
+  push:
+    branches:
+      - main
 
 permissions:
   # Require writing security events to upload SARIF file to security tab
   security-events: write
-  # Only need to read contents
+  # Only need to read contents adn actions
   contents: read
+  actions: read
 
 jobs:
   scan-pr:
