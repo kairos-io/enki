@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
+	iofs "io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -13,8 +14,8 @@ import (
 
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
-	"github.com/twpayne/go-vfs"
-	"github.com/twpayne/go-vfs/vfst"
+	"github.com/twpayne/go-vfs/v4"
+	"github.com/twpayne/go-vfs/v4/vfst"
 )
 
 // MkdirAll directory and all parents if not existing
@@ -160,7 +161,7 @@ func ConcatFiles(fs v1.FS, sources []string, target string) (err error) {
 		}
 	}()
 
-	var sourceFile *os.File
+	var sourceFile iofs.File
 	for _, source := range sources {
 		sourceFile, err = fs.Open(source)
 		if err != nil {

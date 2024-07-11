@@ -1,9 +1,6 @@
 package config
 
 import (
-	"io"
-	"io/fs"
-	"os"
 	"reflect"
 	"runtime"
 
@@ -15,12 +12,12 @@ import (
 	"github.com/kairos-io/kairos-agent/v2/pkg/config"
 	"github.com/kairos-io/kairos-agent/v2/pkg/http"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	sdkTypes "github.com/kairos-io/kairos-sdk/types"
 	"github.com/mitchellh/mapstructure"
 	"github.com/sanity-io/litter"
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/twpayne/go-vfs"
+	"github.com/twpayne/go-vfs/v4"
 )
 
 var decodeHook = viper.DecodeHook(
@@ -38,7 +35,7 @@ func WithFs(fs v1.FS) func(r *config.Config) error {
 	}
 }
 
-func WithLogger(logger v1.Logger) func(r *config.Config) error {
+func WithLogger(logger sdkTypes.KairosLogger) func(r *config.Config) error {
 	return func(r *config.Config) error {
 		r.Logger = logger
 		return nil
@@ -90,7 +87,15 @@ func WithImageExtractor(extractor v1.ImageExtractor) func(r *config.Config) erro
 type GenericOptions func(a *config.Config) error
 
 func ReadConfigBuild(configDir string, flags *pflag.FlagSet) (*types.BuildConfig, error) {
-	logger := v1.NewLogger()
+	var logLevel string
+	if viper.GetBool("debug") {
+		logLevel = "debug"
+	} else {
+		logLevel = "info"
+	}
+	logger := sdkTypes.NewKairosLogger("enki", logLevel, viper.GetBool("quiet"))
+	logger.Infof("Starting enki version %s", version.GetVersion())
+
 	if configDir == "" {
 		configDir = "."
 	}
@@ -101,8 +106,6 @@ func ReadConfigBuild(configDir string, flags *pflag.FlagSet) (*types.BuildConfig
 		WithImageExtractor(v1.OCIImageExtractor{}),
 		WithLogger(logger),
 	)
-
-	configLogger(cfg.Logger, cfg.Fs)
 
 	viper.AddConfigPath(configDir)
 	viper.SetConfigType("yaml")
@@ -160,7 +163,7 @@ func NewBuildConfig(opts ...GenericOptions) *types.BuildConfig {
 }
 
 func NewConfig(opts ...GenericOptions) *config.Config {
-	log := v1.NewLogger()
+	log := sdkTypes.NewKairosLogger("enki", "info", false)
 	arch, err := utils.GolangArchToArch(runtime.GOARCH)
 	if err != nil {
 		log.Errorf("invalid arch: %s", err.Error())
@@ -185,13 +188,13 @@ func NewConfig(opts ...GenericOptions) *config.Config {
 
 	// delay runner creation after we have run over the options in case we use WithRunner
 	if c.Runner == nil {
-		c.Runner = &v1.RealRunner{Logger: c.Logger}
+		c.Runner = &v1.RealRunner{Logger: &c.Logger}
 	}
 
 	// Now check if the runner has a logger inside, otherwise point our logger into it
 	// This can happen if we set the WithRunner option as that doesn't set a logger
 	if c.Runner.GetLogger() == nil {
-		c.Runner.SetLogger(c.Logger)
+		c.Runner.SetLogger(&c.Logger)
 	}
 
 	// Delay the yip runner creation, so we set the proper logger instead of blindly setting it to the logger we create
@@ -203,46 +206,6 @@ func NewConfig(opts ...GenericOptions) *config.Config {
 	litter.Config.HidePrivateFields = false
 
 	return c
-}
-
-func configLogger(log v1.Logger, vfs v1.FS) {
-	// Set debug level
-	if viper.GetBool("debug") {
-		log.SetLevel(v1.DebugLevel())
-	}
-
-	// Set formatter so both file and stdout format are equal
-	log.SetFormatter(&logrus.TextFormatter{
-		ForceColors:      true,
-		DisableColors:    false,
-		DisableTimestamp: false,
-		FullTimestamp:    true,
-	})
-
-	// Logfile
-	logfile := viper.GetString("logfile")
-	if logfile != "" {
-		o, err := vfs.OpenFile(logfile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, fs.ModePerm)
-
-		if err != nil {
-			log.Errorf("Could not open %s for logging to file: %s", logfile, err.Error())
-		}
-
-		// else set it to both stdout and the file
-		mw := io.MultiWriter(os.Stdout, o)
-		log.SetOutput(mw)
-	} else { // no logfile
-		if viper.GetBool("quiet") { // quiet is enabled so discard all logging
-			log.SetOutput(io.Discard)
-		} else { // default to stdout
-			log.SetOutput(os.Stdout)
-		}
-	}
-
-	log.Infof("Starting enki version %s", version.GetVersion())
-	if log.GetLevel() == logrus.DebugLevel {
-		log.Debugf("%+v\n", version.Get())
-	}
 }
 
 // BindGivenFlags binds to viper only passed flags, ignoring any non provided flag

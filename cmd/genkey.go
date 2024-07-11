@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/kairos-io/enki/pkg/config"
-	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	sdkTypes "github.com/kairos-io/kairos-sdk/types"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
@@ -225,7 +225,7 @@ func generateAuthKeys(guid efiutil.EFIGUID, keyPath, keyType, customDerCertDir s
 // - KEK
 // It returns the prepared temporary directory where the keys are stored in
 // "der" format in the expected directories.
-func prepareCustomDerDir(l v1.Logger) (string, error) {
+func prepareCustomDerDir(l sdkTypes.KairosLogger) (string, error) {
 	customCertDir := viper.GetString(customCertDirFlag)
 	if customCertDir != "" {
 		if _, err := os.Stat(customCertDir); os.IsNotExist(err) {
@@ -275,7 +275,7 @@ func prepareCustomDerDir(l v1.Logger) (string, error) {
 	return tmpDir, nil
 }
 
-func appendCustomDerCerts(l v1.Logger, keyType, customDerCertDir, keyPath string) error {
+func appendCustomDerCerts(l sdkTypes.KairosLogger, keyType, customDerCertDir, keyPath string) error {
 	if customDerCertDir == "" {
 		return nil
 	}

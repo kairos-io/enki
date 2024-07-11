@@ -24,6 +24,7 @@ import (
 	"github.com/kairos-io/go-ukify/pkg/uki"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	sdkTypes "github.com/kairos-io/kairos-sdk/types"
 )
 
 type BuildUKIAction struct {
@@ -31,7 +32,7 @@ type BuildUKIAction struct {
 	e             *elemental.Elemental
 	outputDir     string
 	keysDirectory string
-	logger        v1.Logger
+	logger        sdkTypes.KairosLogger
 	outputType    string
 	version       string
 	arch          string
