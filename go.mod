@@ -3,13 +3,13 @@ module github.com/kairos-io/enki
 go 1.22.5
 
 require (
-	github.com/containerd/containerd v1.7.18
+	github.com/containerd/containerd v1.7.19
 	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.20.0
 	github.com/kairos-io/go-ukify v0.2.2
 	github.com/kairos-io/kairos-agent/v2 v2.13.0
-	github.com/kairos-io/kairos-sdk v0.2.3
+	github.com/kairos-io/kairos-sdk v0.3.0
 	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/onsi/ginkgo/v2 v2.19.0
@@ -69,7 +69,7 @@ require (
 	github.com/disintegration/imaging v1.6.2 // indirect
 	github.com/diskfs/go-diskfs v1.3.0 // indirect
 	github.com/distribution/distribution v2.8.3+incompatible // indirect
-	github.com/distribution/reference v0.5.0 // indirect
+	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v24.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v27.0.3+incompatible // indirect
