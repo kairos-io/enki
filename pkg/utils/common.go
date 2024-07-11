@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/kairos-io/enki/pkg/constants"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	sdkTypes "github.com/kairos-io/kairos-sdk/types"
 	"github.com/spf13/viper"
 )
 
@@ -30,7 +31,7 @@ type BootEntry struct {
 
 // CreateSquashFS creates a squash file at destination from a source, with options
 // TODO: Check validity of source maybe?
-func CreateSquashFS(runner v1.Runner, logger v1.Logger, source string, destination string, options []string) error {
+func CreateSquashFS(runner v1.Runner, logger sdkTypes.KairosLogger, source string, destination string, options []string) error {
 	// create args
 	args := []string{source, destination}
 	// append options passed to args in order to have the correct order
@@ -100,7 +101,7 @@ func GetUkiCmdline() []BootEntry {
 }
 
 // GetUkiSingleCmdlines returns the single-efi-cmdline as passed by the user.
-func GetUkiSingleCmdlines(logger v1.Logger) []BootEntry {
+func GetUkiSingleCmdlines(logger sdkTypes.KairosLogger) []BootEntry {
 	result := []BootEntry{}
 	// extra
 	defaultCmdLine := constants.UkiCmdline + " " + constants.UkiCmdlineInstall
@@ -189,7 +190,7 @@ func Tar(src string, writers ...io.Writer) error {
 }
 
 // CreateTar a imagetarball from a standard tarball
-func CreateTar(log v1.Logger, srctar, dstimageTar, imagename, architecture, OS string) error {
+func CreateTar(log sdkTypes.KairosLogger, srctar, dstimageTar, imagename, architecture, OS string) error {
 
 	dstFile, err := os.Create(dstimageTar)
 	if err != nil {

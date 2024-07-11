@@ -29,18 +29,18 @@ import (
 	"github.com/kairos-io/enki/pkg/utils"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	v1mock "github.com/kairos-io/kairos-agent/v2/tests/mocks"
+	sdkTypes "github.com/kairos-io/kairos-sdk/types"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/sirupsen/logrus"
-	"github.com/twpayne/go-vfs"
-	"github.com/twpayne/go-vfs/vfst"
+	"github.com/twpayne/go-vfs/v4"
+	"github.com/twpayne/go-vfs/v4/vfst"
 )
 
 var _ = Describe("BuildISOAction", func() {
 	var cfg *types.BuildConfig
 	var runner *v1mock.FakeRunner
 	var fs vfs.FS
-	var logger v1.Logger
+	var logger sdkTypes.KairosLogger
 	var syscall *v1mock.FakeSyscall
 	var client *v1mock.FakeHTTPClient
 	var cloudInit *v1mock.FakeCloudInitRunner
@@ -52,8 +52,8 @@ var _ = Describe("BuildISOAction", func() {
 		syscall = &v1mock.FakeSyscall{}
 		client = &v1mock.FakeHTTPClient{}
 		memLog = &bytes.Buffer{}
-		logger = v1.NewBufferLogger(memLog)
-		logger.SetLevel(logrus.DebugLevel)
+		logger = sdkTypes.NewBufferLogger(memLog)
+		logger.SetLevel("debug")
 		cloudInit = &v1mock.FakeCloudInitRunner{}
 		fs, cleanup, _ = vfst.NewTestFS(map[string]interface{}{})
 		imageExtractor = v1mock.NewFakeImageExtractor(logger)
