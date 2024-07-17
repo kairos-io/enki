@@ -6,7 +6,7 @@ require (
 	github.com/containerd/containerd v1.7.18
 	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
-	github.com/google/go-containerregistry v0.20.0
+	github.com/google/go-containerregistry v0.20.1
 	github.com/kairos-io/go-ukify v0.2.2
 	github.com/kairos-io/kairos-agent/v2 v2.13.1
 	github.com/kairos-io/kairos-sdk v0.2.3
