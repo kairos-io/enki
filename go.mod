@@ -4,6 +4,7 @@ go 1.23.1
 
 require (
 	github.com/containerd/containerd v1.7.22
+	github.com/diskfs/go-diskfs v1.4.1
 	github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/gofrs/uuid v4.4.0+incompatible
@@ -56,7 +57,6 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.4 // indirect
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
-	github.com/diskfs/go-diskfs v1.4.1 // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/docker/cli v27.1.1+incompatible // indirect
@@ -72,7 +72,6 @@ require (
 	github.com/fatih/color v1.14.1 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.5.0 // indirect
 	github.com/go-git/go-git/v5 v5.12.0 // indirect
@@ -97,7 +96,6 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
-	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/ipfs/go-log v1.0.5 // indirect
 	github.com/ipfs/go-log/v2 v2.1.3 // indirect
@@ -135,7 +133,6 @@ require (
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5 // indirect
 	github.com/phayes/permbits v0.0.0-20190612203442-39d7c581d2ee // indirect
-	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pjbgf/sha1cd v0.3.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
@@ -198,7 +195,6 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240314234333-6e1732d8331c // indirect
 	google.golang.org/grpc v1.62.1 // indirect
 	google.golang.org/protobuf v1.34.1 // indirect
-	gopkg.in/djherbis/times.v1 v1.3.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0 // indirect

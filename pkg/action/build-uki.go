@@ -2,6 +2,9 @@ package action
 
 import (
 	"fmt"
+	"github.com/diskfs/go-diskfs/disk"
+	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
 	"io"
 	"log/slog"
 	"math"
@@ -19,6 +22,7 @@ import (
 	"github.com/u-root/u-root/pkg/cpio"
 	"golang.org/x/exp/maps"
 
+	diskfs "github.com/diskfs/go-diskfs"
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/go-ukify/pkg/uki"
@@ -521,16 +525,98 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	if b.name != "" {
 		isoName = fmt.Sprintf("%s.iso", b.name)
 	}
+	var LogicalBlocksize diskfs.SectorSize = 2048
+	diskSize, err := FolderSize(isoDir)
 
-	b.logger.Info("Creating the iso files with xorriso")
-	cmd := exec.Command("xorriso", "-as", "mkisofs", "-V", "UKI_ISO_INSTALL", "-isohybrid-gpt-basdat",
-		"-e", filepath.Base(imgFile), "-no-emul-boot", "-o", filepath.Join(b.outputDir, isoName), isoDir)
-	out, err := cmd.CombinedOutput()
+	mydisk, err := diskfs.Create(isoName, diskSize, diskfs.Raw, LogicalBlocksize)
+
+	fspec := disk.FilesystemSpec{Partition: 0, FSType: filesystem.TypeISO9660, VolumeLabel: "EFI"}
+	fs, err := mydisk.CreateFilesystem(fspec)
+
+	b.logger.Info("Creating the iso files with")
+	// Walk the source folder to copy all files and folders to the ISO filesystem
+	err = filepath.Walk(isoDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("error creating iso file: %w", err)
+		}
+
+		relPath, err := filepath.Rel(isoDir, path)
+		if err != nil {
+			return fmt.Errorf("error creating iso file: %w", err)
+		}
+
+		// If the current path is a folder, create the folder in the ISO filesystem
+		if info.IsDir() {
+			// Create the directory in the ISO file
+			err = fs.Mkdir(relPath)
+			if err != nil {
+				return fmt.Errorf("error creating iso file: %w", err)
+			}
+			return nil
+		}
+
+		// If the current path is a file, copy the file to the ISO filesystem
+		if !info.IsDir() {
+			// Open the file in the ISO file for writing
+			rw, err := fs.OpenFile(relPath, os.O_CREATE|os.O_RDWR)
+			if err != nil {
+				return fmt.Errorf("error creating iso file: %w", err)
+			}
+
+			// Open the source file for reading
+			in, errorOpeningFile := os.Open(path)
+			if errorOpeningFile != nil {
+				return errorOpeningFile
+			}
+			defer in.Close()
+
+			// Copy the contents of the source file to the ISO file
+			_, err = io.Copy(rw, in)
+			if err != nil {
+				return fmt.Errorf("error creating iso file: %w", err)
+			}
+		}
+
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("error creating iso file: %w\n%s", err, string(out))
+		return fmt.Errorf("error creating iso file: %w", err)
+	}
+	iso, ok := fs.(*iso9660.FileSystem)
+	if !ok {
+		return fmt.Errorf("not an iso9660 filesystem")
 	}
 
-	return nil
+	err = iso.Finalize(iso9660.FinalizeOptions{
+		VolumeIdentifier: "UKI_ISO_INSTALL",
+		RockRidge:        true,
+		ElTorito: &iso9660.ElTorito{
+			HideBootCatalog: true,
+			Entries: []*iso9660.ElToritoEntry{
+				{
+					Platform:  iso9660.EFI,
+					Emulation: iso9660.NoEmulation,
+					BootFile:  "efiboot.img",
+				},
+			},
+		},
+	})
+
+	return err
+}
+
+func FolderSize(path string) (int64, error) {
+	var size int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return err
+	})
+	return size, err
 }
 
 func (b *BuildUKIAction) createContainer(sourceDir, version string) error {
