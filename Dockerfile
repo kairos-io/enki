@@ -42,11 +42,3 @@ RUN dnf install -y binutils mtools efitools shim openssl dosfstools xorriso rsyn
 COPY --from=builder /enki /enki
 
 ENTRYPOINT ["/enki"]
-
-FROM gcr.io/kaniko-project/executor:latest
-
-COPY --from=builder /enki /enki
-
-ENTRYPOINT ["/enki"]
-
-CMD ["convert"]

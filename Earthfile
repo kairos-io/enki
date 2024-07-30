@@ -4,14 +4,13 @@ VERSION 0.7
 ARG --global GO_VERSION=1.22-bookworm
 
 enki-image:
-    FROM DOCKERFILE -f e2e/assets/Dockerfile.enki e2e/assets/
+    FROM DOCKERFILE -f Dockerfile .
 
     SAVE IMAGE enki-image
 
 go-deps:
     ARG GO_VERSION
     FROM golang:$GO_VERSION
-    RUN apt-get update && apt-get install -y rsync gcc bash git jq docker
     WORKDIR /build
     COPY go.mod go.sum . # This will make the go mod download able to be cached as long as it hasnt change
     RUN go mod download
