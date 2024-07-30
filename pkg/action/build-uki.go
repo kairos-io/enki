@@ -5,11 +5,11 @@ import (
 	"github.com/diskfs/go-diskfs/disk"
 	"github.com/diskfs/go-diskfs/filesystem"
 	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+	"github.com/diskfs/go-diskfs/partition/gpt"
 	"io"
 	"log/slog"
 	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -261,21 +261,6 @@ func (b *BuildUKIAction) extractImage() (string, error) {
 }
 
 func (b *BuildUKIAction) checkDeps() error {
-	neededBinaries := []string{
-		"dd",
-		"mkfs.msdos",
-		"mmd",
-		"mcopy",
-		"xorriso",
-	}
-
-	for _, b := range neededBinaries {
-		_, err := exec.LookPath(b)
-		if err != nil {
-			return err
-		}
-	}
-
 	neededFiles, err := b.getEfiNeededFiles()
 	if err != nil {
 		return err
@@ -466,7 +451,7 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline, title, finalEfiName
 }
 
 func (b *BuildUKIAction) createISO(sourceDir string) error {
-	// isoDir is where we generate the img file. We pass this dir to xorriso.
+
 	isoDir, err := os.MkdirTemp("", "enki-iso-dir-")
 	if err != nil {
 		return err
@@ -484,25 +469,76 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		return err
 	}
 
-	// Create just the size we need + 50MB just in case
-	imgSize := artifactSize + 50
 	imgFile := filepath.Join(isoDir, "efiboot.img")
-	b.logger.Info(fmt.Sprintf("Creating the img file with size: %dMb", imgSize))
-	if err = createImgWithSize(imgFile, imgSize); err != nil {
+
+	var (
+		espSize          int64 = (artifactSize + 50) * 1024 * 1024 // 100 MB
+		diskSize         int64 = espSize + 4*1024*1024             // 104 MB
+		partitionStart   int64 = 2048
+		partitionSectors int64 = espSize / 512
+		partitionEnd     int64 = partitionSectors - partitionStart + 1
+	)
+
+	efidisk, err := diskfs.Create(imgFile, diskSize, diskfs.Raw, diskfs.SectorSizeDefault)
+	if err != nil {
+		b.logger.Warnf("Error creating image file %s: %s", imgFile, err)
 		return err
 	}
-	defer os.Remove(imgFile)
+	table := &gpt.Table{
+		Partitions: []*gpt.Partition{
+			{Start: uint64(partitionStart), End: uint64(partitionEnd), Type: gpt.EFISystemPartition, Name: "EFI System"},
+		},
+	}
+	err = efidisk.Partition(table)
+	if err != nil {
+		b.logger.Warnf("Error creating partition: %s", err)
+		return err
+	}
+	fs, err := efidisk.CreateFilesystem(disk.FilesystemSpec{Partition: 1, FSType: filesystem.TypeFat32})
+	if err != nil {
+		b.logger.Warnf("Error creating fs: %s", err)
+		return err
+	}
 
 	b.logger.Info(fmt.Sprintf("Created image: %s", imgFile))
 
 	b.logger.Info("Creating directories in the img file")
-	if err := createImgDirs(imgFile, filesMap); err != nil {
-		return err
+	dirs := maps.Keys(filesMap)
+	sort.Strings(dirs) // Make sure we create outer dirs first
+	for _, dir := range dirs {
+		err = fs.Mkdir(dir)
+		if err != nil {
+			b.logger.Warnf("Error crating dir %s: %s", dir, err)
+			return err
+		}
 	}
 
 	b.logger.Info("Copying files in the img file")
-	if err := copyFilesToImg(imgFile, filesMap); err != nil {
-		return err
+	for dir, files := range filesMap {
+		for _, f := range files {
+			b.logger.Debugf("Copying file: %s", f)
+			_, err := os.Stat(f)
+			if err != nil {
+				b.logger.Warnf("Couldn't find file: %s", f)
+				continue
+			}
+			fileRead, err := os.ReadFile(f)
+			if err != nil {
+				return err
+			}
+			rw, err := fs.OpenFile(filepath.Join(dir, filepath.Base(f)), os.O_CREATE|os.O_RDWR)
+			if err != nil {
+				b.logger.Errorf("Error creating file %s: %s", filepath.Join(dir, filepath.Base(f)), err)
+				return err
+			}
+			_, err = rw.Write(fileRead)
+			if err != nil {
+				b.logger.Errorf("Error writing file %s: %s", filepath.Join(dir, filepath.Base(f)), err)
+				return err
+			}
+			b.logger.Debugf("Copied file: %s", f)
+
+		}
 	}
 
 	if viper.GetString("overlay-iso") != "" {
@@ -521,36 +557,45 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 
 	}
 
+	// ISO building
 	isoName := fmt.Sprintf("kairos_%s.iso", b.version)
 	if b.name != "" {
 		isoName = fmt.Sprintf("%s.iso", b.name)
 	}
-	var LogicalBlocksize diskfs.SectorSize = 2048
-	diskSize, err := FolderSize(isoDir)
 
-	mydisk, err := diskfs.Create(isoName, diskSize, diskfs.Raw, LogicalBlocksize)
+	isoSize, err := FolderSize(isoDir)
+	if err != nil {
+		return fmt.Errorf("error checking size: %w", err)
+	}
+	_ = os.RemoveAll(filepath.Join(b.outputDir, isoName))
+	mydisk, err := diskfs.Create(filepath.Join(b.outputDir, isoName), isoSize, diskfs.Raw, 2048)
+	if err != nil {
+		return fmt.Errorf("error creating output iso file %s: %w", filepath.Join(b.outputDir, isoName), err)
+	}
+	isoFs, err := mydisk.CreateFilesystem(disk.FilesystemSpec{Partition: 0, FSType: filesystem.TypeISO9660, VolumeLabel: "UKI_ISO_INSTALL"})
+	if err != nil {
+		return fmt.Errorf("error creating filesystem: %w", err)
+	}
 
-	fspec := disk.FilesystemSpec{Partition: 0, FSType: filesystem.TypeISO9660, VolumeLabel: "EFI"}
-	fs, err := mydisk.CreateFilesystem(fspec)
-
-	b.logger.Info("Creating the iso files with")
+	b.logger.Info("Copying file to final iso")
 	// Walk the source folder to copy all files and folders to the ISO filesystem
-	err = filepath.Walk(isoDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(isoDir, func(path string, info os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("error creating iso file: %w", err)
 		}
+		b.logger.Infof("Doing path %s", path)
 
 		relPath, err := filepath.Rel(isoDir, path)
 		if err != nil {
-			return fmt.Errorf("error creating iso file: %w", err)
+			return fmt.Errorf("error getting relpath of %s: %w", path, err)
 		}
 
 		// If the current path is a folder, create the folder in the ISO filesystem
 		if info.IsDir() {
 			// Create the directory in the ISO file
-			err = fs.Mkdir(relPath)
+			err = isoFs.Mkdir(relPath)
 			if err != nil {
-				return fmt.Errorf("error creating iso file: %w", err)
+				return fmt.Errorf("error creating dir %s: %w", relPath, err)
 			}
 			return nil
 		}
@@ -558,9 +603,9 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		// If the current path is a file, copy the file to the ISO filesystem
 		if !info.IsDir() {
 			// Open the file in the ISO file for writing
-			rw, err := fs.OpenFile(relPath, os.O_CREATE|os.O_RDWR)
+			rw, err := isoFs.OpenFile(relPath, os.O_CREATE|os.O_RDWR)
 			if err != nil {
-				return fmt.Errorf("error creating iso file: %w", err)
+				return fmt.Errorf("error opening file %s: %w", relPath, err)
 			}
 
 			// Open the source file for reading
@@ -573,7 +618,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 			// Copy the contents of the source file to the ISO file
 			_, err = io.Copy(rw, in)
 			if err != nil {
-				return fmt.Errorf("error creating iso file: %w", err)
+				return fmt.Errorf("error copying file: %w", err)
 			}
 		}
 
@@ -582,7 +627,7 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 	if err != nil {
 		return fmt.Errorf("error creating iso file: %w", err)
 	}
-	iso, ok := fs.(*iso9660.FileSystem)
+	iso, ok := isoFs.(*iso9660.FileSystem)
 	if !ok {
 		return fmt.Errorf("not an iso9660 filesystem")
 	}
@@ -591,12 +636,11 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		VolumeIdentifier: "UKI_ISO_INSTALL",
 		RockRidge:        true,
 		ElTorito: &iso9660.ElTorito{
-			HideBootCatalog: true,
 			Entries: []*iso9660.ElToritoEntry{
 				{
 					Platform:  iso9660.EFI,
 					Emulation: iso9660.NoEmulation,
-					BootFile:  "efiboot.img",
+					BootFile:  "/efiboot.img",
 				},
 			},
 		},
@@ -702,14 +746,14 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	// the keys are the target dirs
 	// the values are the source files that should be copied into the target dir
 	data := map[string][]string{
-		"EFI":            {},
-		"EFI/BOOT":       {filepath.Join(sourceDir, "BOOTX64.EFI")},
-		"EFI/kairos":     {},
-		"EFI/tools":      {},
-		"loader":         {filepath.Join(sourceDir, "loader.conf")},
-		"loader/entries": {},
-		"loader/keys":    {},
-		"loader/keys/auto": {
+		"/EFI":            {},
+		"/EFI/BOOT":       {filepath.Join(sourceDir, "BOOTX64.EFI")},
+		"/EFI/kairos":     {},
+		"/EFI/tools":      {},
+		"/loader":         {filepath.Join(sourceDir, "loader.conf")},
+		"/loader/entries": {},
+		"/loader/keys":    {},
+		"/loader/keys/auto": {
 			filepath.Join(b.keysDirectory, "PK.der"),
 			filepath.Join(b.keysDirectory, "KEK.der"),
 			filepath.Join(b.keysDirectory, "db.der"),
@@ -720,8 +764,8 @@ func (b *BuildUKIAction) imageFiles(sourceDir string) (map[string][]string, erro
 	// Add the kairos efi files and the loader conf files for each cmdline
 	entries := append(utils.GetUkiCmdline(), utils.GetUkiSingleCmdlines(b.logger)...)
 	for _, entry := range entries {
-		data["EFI/kairos"] = append(data["EFI/kairos"], filepath.Join(sourceDir, entry.FileName+".efi"))
-		data["loader/entries"] = append(data["loader/entries"], filepath.Join(sourceDir, entry.FileName+".conf"))
+		data["/EFI/kairos"] = append(data["/EFI/kairos"], filepath.Join(sourceDir, entry.FileName+".efi"))
+		data["/loader/entries"] = append(data["/loader/entries"], filepath.Join(sourceDir, entry.FileName+".conf"))
 	}
 	return data, nil
 }
@@ -783,20 +827,6 @@ func (b *BuildUKIAction) cleanSource(dir string) {
 	// TODO: there should be a copy of the kernel at /usrt/lib/modules/VERSION/kernel/vmlinuz that we may also want to remove
 }
 
-func copyFilesToImg(imgFile string, filesMap map[string][]string) error {
-	for dir, files := range filesMap {
-		for _, f := range files {
-			cmd := exec.Command("mcopy", "-i", imgFile, f, filepath.Join(fmt.Sprintf("::%s", dir), filepath.Base(f)))
-			out, err := cmd.CombinedOutput()
-			if err != nil {
-				return fmt.Errorf("copying %s in img file: %w\n%s", f, err, string(out))
-			}
-		}
-	}
-
-	return nil
-}
-
 func ZstdFile(sourcePath, targetPath string) error {
 	inputFile, err := os.Open(sourcePath)
 	if err != nil {
@@ -839,20 +869,6 @@ func findKairosVersion(sourceDir string) (string, error) {
 	return match[1], nil
 }
 
-func createImgWithSize(imgFile string, size int64) error {
-	cmd := exec.Command("dd",
-		"if=/dev/zero", fmt.Sprintf("of=%s", imgFile),
-		"bs=1M", fmt.Sprintf("count=%d", size),
-	)
-
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("creating the img file: %w\n%s", err, out)
-	}
-
-	return nil
-}
-
 func sumFileSizes(filesMap map[string][]string) (int64, error) {
 	total := int64(0)
 	for _, files := range maps.Values(filesMap) {
@@ -868,25 +884,4 @@ func sumFileSizes(filesMap map[string][]string) (int64, error) {
 	totalInMB := int64(math.Round(float64(total) / (1024 * 1024)))
 
 	return totalInMB, nil
-}
-
-func createImgDirs(imgFile string, filesMap map[string][]string) error {
-	cmd := exec.Command("mkfs.msdos", "-F", "32", imgFile)
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("formating the img file to fat: %w\n%s", err, string(out))
-	}
-
-	dirs := maps.Keys(filesMap)
-	sort.Strings(dirs) // Make sure we create outer dirs first
-	for _, dir := range dirs {
-		// Dirs in MSDOS are marked with ::DIR
-		cmd := exec.Command("mmd", "-i", imgFile, fmt.Sprintf("::%s", dir))
-		out, err := cmd.CombinedOutput()
-		if err != nil {
-			return fmt.Errorf("creating directory %s on the img file: %w\n%s\nThe failed command was: %s", dir, err, string(out), cmd.String())
-		}
-	}
-
-	return nil
 }
