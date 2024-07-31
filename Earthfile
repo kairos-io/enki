@@ -2,6 +2,8 @@ VERSION 0.7
 
 # renovate: datasource=docker depName=golang
 ARG --global GO_VERSION=1.22-bookworm
+# renovate: datasource=docker depName=ubuntu
+ARG --global BASE_IMAGE=quay.io/kairos/ubuntu:24.04-core-amd64-generic-v3.1.1-uki
 
 enki-image:
     FROM DOCKERFILE -f Dockerfile .
@@ -54,7 +56,7 @@ build:
 
 build-iso:
     FROM +enki-image
-    ARG BASE_IMAGE=quay.io/kairos/ubuntu:24.04-core-amd64-generic-v3.1.1-uki
+    ARG BASE_IMAGE
     WORKDIR /build
     RUN /enki genkey -e 7 --output /keys CIKEYS
     # Extend the default cmdline to write everything to serial first :D
