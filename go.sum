@@ -1073,6 +1073,10 @@ github.com/twpayne/go-vfs/v4 v4.3.0 h1:rTqFzzOQ/6ESKTSiwVubHlCBedJDOhQyVSnw8rQNZ
 github.com/twpayne/go-vfs/v4 v4.3.0/go.mod h1:tq2UVhnUepesc0lSnPJH/jQ8HruGhzwZe2r5kDFpEIw=
 github.com/u-root/u-root v0.12.0 h1:K0AuBFriwr0w/PGS3HawiAw89e3+MU7ks80GpghAsNs=
 github.com/u-root/u-root v0.12.0/go.mod h1:FYjTOh4IkIZHhjsd17lb8nYW6udgXdJhG1c0r6u0arI=
+github.com/u-root/u-root v0.14.0 h1:Ka4T10EEML7dQ5XDvO9c3MBN8z4nuSnGjcd1jmU2ivg=
+github.com/u-root/u-root v0.14.0/go.mod h1:hAyZorapJe4qzbLWlAkmSVCJGbfoU9Pu4jpJ1WMluqE=
+github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a h1:BH1SOPEvehD2kVrndDnGJiUF0TrBpNs+iyYocu6h0og=
+github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a/go.mod h1:P3a5rG4X7tI17Nn3aOIAYr5HbIMukwXG0urG0WuL8OA=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
 github.com/ugorji/go v1.1.7/go.mod h1:kZn38zHttfInRq0xu/PH0az30d+z6vm202qpg1oXVMw=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
