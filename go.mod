@@ -23,7 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/twpayne/go-vfs/v4 v4.3.0
-	github.com/u-root/u-root v0.12.0
+	github.com/u-root/u-root v0.14.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 )
 
@@ -162,6 +162,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/tredoe/osutil v1.5.0 // indirect
+	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2 // indirect
