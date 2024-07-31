@@ -1069,6 +1069,7 @@ github.com/tredoe/osutil v1.5.0 h1:UGVxbbHRoZi8xXVmbNZ2vgG6XoJ15ndE4LniiQ3rJKg=
 github.com/tredoe/osutil v1.5.0/go.mod h1:TEzphzUUunysbdDRfdOgqkg10POQbnfIPV50ynqOfIg=
 github.com/twpayne/go-vfs/v4 v4.3.0 h1:rTqFzzOQ/6ESKTSiwVubHlCBedJDOhQyVSnw8rQNZhU=
 github.com/twpayne/go-vfs/v4 v4.3.0/go.mod h1:tq2UVhnUepesc0lSnPJH/jQ8HruGhzwZe2r5kDFpEIw=
+github.com/twpayne/go-vfs/v5 v5.0.4/go.mod h1:zTPFJUbgsEMFNSWnWQlLq9wh4AN83edZzx3VXbxrS1w=
 github.com/u-root/u-root v0.12.0 h1:K0AuBFriwr0w/PGS3HawiAw89e3+MU7ks80GpghAsNs=
 github.com/u-root/u-root v0.12.0/go.mod h1:FYjTOh4IkIZHhjsd17lb8nYW6udgXdJhG1c0r6u0arI=
 github.com/ugorji/go v1.1.4/go.mod h1:uQMGLiO92mf5W77hV/PUCpI3pbzQx3CRekS0kk+RGrc=
