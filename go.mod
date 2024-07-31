@@ -4,7 +4,7 @@ go 1.22.5
 
 require (
 	github.com/containerd/containerd v1.7.18
-	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
+	github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.20.1
 	github.com/google/uuid v1.6.0
@@ -23,7 +23,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.19.0
 	github.com/twpayne/go-vfs/v5 v5.0.4
-	github.com/u-root/u-root v0.12.0
+	github.com/u-root/u-root v0.14.0
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56
 )
 
@@ -59,7 +59,7 @@ require (
 	github.com/distribution/reference v0.5.0 // indirect
 	github.com/docker/cli v24.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v27.0.3+incompatible // indirect
+	github.com/docker/docker v27.1.0+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -163,6 +163,7 @@ require (
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/tredoe/osutil v1.5.0 // indirect
 	github.com/twpayne/go-vfs/v4 v4.3.0 // indirect
+	github.com/u-root/uio v0.0.0-20240209044354-b3d14b93376a // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
 	github.com/vbatts/tar-split v0.11.3 // indirect
 	github.com/vishvananda/netlink v1.2.1-beta.2 // indirect
