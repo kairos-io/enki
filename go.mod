@@ -3,14 +3,14 @@ module github.com/kairos-io/enki
 go 1.22.5
 
 require (
-	github.com/containerd/containerd v1.7.18
+	github.com/containerd/containerd v1.7.20
 	github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.20.1
 	github.com/google/uuid v1.6.0
 	github.com/kairos-io/go-ukify v0.2.2
-	github.com/kairos-io/kairos-agent/v2 v2.13.1
-	github.com/kairos-io/kairos-sdk v0.2.3
+	github.com/kairos-io/kairos-agent/v2 v2.13.2
+	github.com/kairos-io/kairos-sdk v0.3.2
 	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mudler/go-processmanager v0.0.0-20230818213616-f204007f963c
@@ -56,10 +56,10 @@ require (
 	github.com/denisbrodbeck/machineid v1.0.1 // indirect
 	github.com/diskfs/go-diskfs v1.3.0 // indirect
 	github.com/distribution/distribution v2.8.3+incompatible // indirect
-	github.com/distribution/reference v0.5.0 // indirect
+	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v24.0.0+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v27.1.0+incompatible // indirect
+	github.com/docker/docker v27.1.1+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -199,7 +199,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/klog/v2 v2.120.1 // indirect
-	k8s.io/mount-utils v0.30.2 // indirect
+	k8s.io/mount-utils v0.30.3 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	pault.ag/go/modprobe v0.1.2 // indirect
 	pault.ag/go/topsort v0.1.1 // indirect
