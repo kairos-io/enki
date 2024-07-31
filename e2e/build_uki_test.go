@@ -9,7 +9,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("build-uki", func() {
+var _ = Describe("build-uki", Label("build-uki", "e2e"), func() {
 	var resultDir string
 	var keysDir string
 	var resultFile string

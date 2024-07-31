@@ -36,9 +36,7 @@
     {
       "fileMatch": [
         "luet-amd64.yaml$",
-        "e2e/assets/luet-amd64.yaml$",
         "luet-arm64.yaml$",
-        "e2e/assets/luet-arm64.yaml$",
       ],
       "matchStrings": [
         "#\\s*renovate:\\s*datasource=(?<datasource>.*?) depName=(?<depName>.*?)?\\s+reference:\\s(?<currentValue>.*?)\\s"

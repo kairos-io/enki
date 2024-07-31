@@ -1,5 +1,5 @@
 ARG LUET_VERSION=0.35.2
-ARG GO_VERSION=1.22-alpine
+ARG GO_VERSION=1.22.5-alpine
 
 FROM quay.io/luet/base:$LUET_VERSION AS luet
 FROM golang:$GO_VERSION AS builder
@@ -42,11 +42,3 @@ RUN dnf install -y binutils mtools efitools shim openssl dosfstools xorriso rsyn
 COPY --from=builder /enki /enki
 
 ENTRYPOINT ["/enki"]
-
-FROM gcr.io/kaniko-project/executor:latest
-
-COPY --from=builder /enki /enki
-
-ENTRYPOINT ["/enki"]
-
-CMD ["convert"]

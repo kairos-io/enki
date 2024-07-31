@@ -27,9 +27,7 @@ func NewEnki(image string, dirs ...string) *Enki {
 	tmpDir, err := os.MkdirTemp("", "enki-e2e-tmp")
 	Expect(err).ToNot(HaveOccurred())
 	enkiBinary := path.Join(tmpDir, "enki")
-
 	compileEnki(enkiBinary)
-
 	return &Enki{ContainerImage: image, Path: enkiBinary, Dirs: dirs}
 }
 
@@ -37,7 +35,7 @@ func NewEnki(image string, dirs ...string) *Enki {
 // are in place (or to test the behavior of enki when they are not), we run enki
 // in a container using this function.
 func (e *Enki) Run(enkiArgs ...string) (string, error) {
-	return e.ContainerRun("/bin/enki", enkiArgs...)
+	return e.ContainerRun(e.Path, enkiArgs...)
 }
 
 // We need --privileged for `mount` to work in the container (used in the build_uki_test.go).

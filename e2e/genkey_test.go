@@ -15,7 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("genkey", func() {
+var _ = Describe("genkey", Label("genkey", "e2e"), func() {
 	var resultDir string
 	var err error
 	var enki *Enki
