@@ -4,7 +4,7 @@ go 1.22.5
 
 require (
 	github.com/containerd/containerd v1.7.18
-	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
+	github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.20.1
 	github.com/google/uuid v1.6.0
