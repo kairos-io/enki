@@ -1,9 +1,10 @@
 VERSION 0.7
 
-# renovate: datasource=docker depName=golang
-ARG --global GO_VERSION=1.22-bookworm
-# renovate: datasource=docker depName=ubuntu
-ARG --global BASE_IMAGE=quay.io/kairos/ubuntu:24.04-core-amd64-generic-v3.1.1-uki
+# renovate: datasource=docker depName=golang versioning=docker
+ARG --global GO_VERSION=1.22.5-bookworm
+# renovate: datasource=github-releases depName=kairos-io/kairos
+ARG IMAGE_VERSION=v3.1.1
+ARG --global BASE_IMAGE=quay.io/kairos/ubuntu:24.04-core-amd64-generic-${IMAGE_VERSION}-uki
 
 enki-image:
     FROM DOCKERFILE -f Dockerfile .
