@@ -9,7 +9,7 @@ require (
 	github.com/google/go-containerregistry v0.20.1
 	github.com/google/uuid v1.6.0
 	github.com/kairos-io/go-ukify v0.2.2
-	github.com/kairos-io/kairos-agent/v2 v2.13.2
+	github.com/kairos-io/kairos-agent/v2 v2.13.3
 	github.com/kairos-io/kairos-sdk v0.3.2
 	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
@@ -116,11 +116,11 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/moby v24.0.9+incompatible // indirect
+	github.com/moby/moby v27.1.1+incompatible // indirect
 	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/moby/sys/sequential v0.5.0 // indirect
 	github.com/mudler/entities v0.8.1 // indirect
-	github.com/mudler/yip v1.9.3 // indirect
+	github.com/mudler/yip v1.9.4 // indirect
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0 // indirect
