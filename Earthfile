@@ -1,7 +1,7 @@
 VERSION 0.7
 
 # renovate: datasource=docker depName=golang versioning=docker
-ARG --global GO_VERSION=1.22.5-bookworm
+ARG --global GO_VERSION=1.22.6-bookworm
 # renovate: datasource=github-releases depName=kairos-io/kairos
 ARG IMAGE_VERSION=v3.1.1
 ARG --global BASE_IMAGE=quay.io/kairos/ubuntu:24.04-core-amd64-generic-${IMAGE_VERSION}-uki
