@@ -342,6 +342,8 @@ github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a h1:Q/VIO3QAlaF95J
 github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
 github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd h1:as2HfgSh+rJJgM9yCSAv+VpJt11hMPpYh6Jo9l45Ceo=
 github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
+github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca h1:ErxkaWK5AIt8gQf3KpAuQQBdZI4ps72HzEe123kh+So=
+github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
 github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e h1:X92hfbSXen3W6t7Y++Nxjp3S/HUrYZFtwaSZBNeO/uk=
 github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e/go.mod h1:/2VaDO9cJIVwJR5XDQogLQEWbTMnVaFq31OEjt66Ju4=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
