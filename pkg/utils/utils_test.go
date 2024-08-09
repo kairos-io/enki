@@ -29,8 +29,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/spf13/viper"
-	"github.com/twpayne/go-vfs/v4"
-	"github.com/twpayne/go-vfs/v4/vfst"
+	"github.com/twpayne/go-vfs/v5"
+	"github.com/twpayne/go-vfs/v5/vfst"
 )
 
 var _ = Describe("Utils", Label("utils"), func() {
