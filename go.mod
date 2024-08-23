@@ -4,13 +4,13 @@ go 1.22.5
 
 require (
 	github.com/containerd/containerd v1.7.20
-	github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd
+	github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
 	github.com/kairos-io/go-ukify v0.2.2
 	github.com/kairos-io/kairos-agent/v2 v2.13.3
-	github.com/kairos-io/kairos-sdk v0.3.2
+	github.com/kairos-io/kairos-sdk v0.4.1
 	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mudler/go-processmanager v0.0.0-20230818213616-f204007f963c
@@ -59,7 +59,7 @@ require (
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/cli v27.1.1+incompatible // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
-	github.com/docker/docker v27.1.1+incompatible // indirect
+	github.com/docker/docker v27.1.2+incompatible // indirect
 	github.com/docker/docker-credential-helpers v0.7.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect

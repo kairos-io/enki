@@ -295,6 +295,8 @@ github.com/docker/docker v27.1.0+incompatible h1:rEHVQc4GZ0MIQKifQPHSFGV/dVgaZaf
 github.com/docker/docker v27.1.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker v27.1.1+incompatible h1:hO/M4MtV36kzKldqnA37IWhebRA+LnqqcqDja6kVaKY=
 github.com/docker/docker v27.1.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v27.1.2+incompatible h1:AhGzR1xaQIy53qCkxARaFluI00WPGtXn0AJuoQsVYTY=
+github.com/docker/docker v27.1.2+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.7.0 h1:xtCHsjxogADNZcdv1pKUHXryefjlVRqWqIhk/uXJp0A=
 github.com/docker/docker-credential-helpers v0.7.0/go.mod h1:rETQfLdHNT3foU5kuNkFR1R1V12OJRRO5lzt2D1b5X0=
 github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
@@ -342,6 +344,8 @@ github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a h1:Q/VIO3QAlaF95J
 github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
 github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd h1:as2HfgSh+rJJgM9yCSAv+VpJt11hMPpYh6Jo9l45Ceo=
 github.com/foxboron/go-uefi v0.0.0-20240722190620-5d4f760099bd/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
+github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca h1:ErxkaWK5AIt8gQf3KpAuQQBdZI4ps72HzEe123kh+So=
+github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca/go.mod h1:ffg/fkDeOYicEQLoO2yFFGt00KUTYVXI+rfnc8il6vQ=
 github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e h1:X92hfbSXen3W6t7Y++Nxjp3S/HUrYZFtwaSZBNeO/uk=
 github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e/go.mod h1:/2VaDO9cJIVwJR5XDQogLQEWbTMnVaFq31OEjt66Ju4=
 github.com/franela/goblin v0.0.0-20200105215937-c9ffbefa60db/go.mod h1:7dvUGVsVBjqR7JHJk0brhHOZYGmfBYOrK0ZhYMEtBr4=
@@ -673,6 +677,8 @@ github.com/kairos-io/kairos-sdk v0.2.3 h1:QXqjVtOm5Ki4N1diI+H6ydrStFhDHDbDkK25HJ
 github.com/kairos-io/kairos-sdk v0.2.3/go.mod h1:wbQNMckCGT/kKd+tqhAZo4thDBPWxpcKaymWJmRqSUg=
 github.com/kairos-io/kairos-sdk v0.3.2 h1:xPs6RKjVdMpv6N//iwkjeJHdieliWRCIJ5bNAJsHEMU=
 github.com/kairos-io/kairos-sdk v0.3.2/go.mod h1:EznuHrE6zGyUsVr1xYj7qYUFWCVKAjXLyKjDUzffME8=
+github.com/kairos-io/kairos-sdk v0.4.1 h1:WF+X30URojMxV7AlzVj0uejvPWG4zq1WNga0swAX4dY=
+github.com/kairos-io/kairos-sdk v0.4.1/go.mod h1:lgQAYkh0aWIZg4/CQcC+OPQp95ONs2PzkMIcAq8w6OY=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c h1:eKb4PqwAMhlqwXw0W3atpKaYaPGlXE/Fwh+xpCEYaPk=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c/go.mod h1:VOfm8h1NySetVlpHDSnbpCMsvCgYaU+YDn4XezUy2+4=
 github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
