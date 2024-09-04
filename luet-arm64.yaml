@@ -13,4 +13,4 @@ repositories:
     urls:
       - "quay.io/kairos/packages-arm64"
     # renovate: datasource=docker depName=quay.io/kairos/packages-arm64
-    reference: 202406241600-git2d546411-repository.yaml
+    reference: 202409040712-git9c5aa63f-repository.yaml
