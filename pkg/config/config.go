@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/twpayne/go-vfs/v5"
 	"reflect"
 	"runtime"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/sanity-io/litter"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
-	"github.com/twpayne/go-vfs/v4"
 )
 
 var decodeHook = viper.DecodeHook(
