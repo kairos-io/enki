@@ -63,7 +63,7 @@ func NewSysextCmd() *cobra.Command {
 				return err
 			}
 			// Only for sysext, confext not supported yet
-			AllowList := regexp.MustCompile(`^usr/|^/usr/`)
+			AllowList := regexp.MustCompile(`^usr/*|^/usr/*`)
 			// extract the files into the temp dir
 			cfg.Logger.Logger.Info().Msg("📤 Extracting archives from image layer")
 			err = sysext.ExtractFilesFromLastLayer(image, dir, cfg.Logger, AllowList)
