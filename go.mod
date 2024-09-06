@@ -11,7 +11,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/kairos-io/go-ukify v0.2.2
 	github.com/kairos-io/kairos-agent/v2 v2.13.5
-	github.com/kairos-io/kairos-sdk v0.4.3-0.20240905082603-42cf473c006c
+	github.com/kairos-io/kairos-sdk v0.4.3-0.20240905131825-2d092e9edd4d
 	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mudler/go-processmanager v0.0.0-20240820160718-8b802d3ecf82
