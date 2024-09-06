@@ -77,11 +77,13 @@ func NewSysextCmd() *cobra.Command {
 				cfg.Logger.Logger.Error().Str("dir", filepath.Join(dir, "/usr/lib/extension-release.d/")).Err(err).Msg("⛔ creating dir")
 			}
 
-			extensionData := "ID=_any\nARCHITECTURE=x86-64"
+			arch := "x86-64"
 
 			if viper.Get("arch") == "arm64" {
-				extensionData = "ID=_any\nARCHITECTURE=arm64"
+				arch = "arm64"
 			}
+
+			extensionData := fmt.Sprintf("ID=_any\nARCHITECTURE=%s", arch)
 
 			// If the extension ships any service files, we want this so systemd is reloaded and the service available immediately
 			if viper.GetBool("service-reload") {
@@ -98,7 +100,7 @@ func NewSysextCmd() *cobra.Command {
 				"systemd-repart",
 				"--make-ddi=sysext",
 				"--image-policy=root=verity+signed+absent:usr=verity+signed+absent",
-				fmt.Sprintf("--architecture=%s", viper.Get("arch")),
+				fmt.Sprintf("--architecture=%s", arch),
 				// Having a fixed predictable seed makes the Image UUID be always the same if the inputs are the same,
 				// so its a reproducible image. So getting the same files and same cert/key should produce a reproducible image always
 				// Another layer to verify images, even if its a manual check, we make it easier
