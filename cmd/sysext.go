@@ -96,6 +96,11 @@ func NewSysextCmd() *cobra.Command {
 
 			cfg.Logger.Logger.Info().Msg("📦 Packing sysext into raw image")
 			// Call systemd-repart to create the sysext based off the files
+			output := fmt.Sprintf("%s.sysext.raw", name)
+			if viper.GetString("output") != "" {
+				output = filepath.Join(viper.GetString("output"), output)
+			}
+			// Call systemd-repart to create the sysext based off the files
 			command := exec.Command(
 				"systemd-repart",
 				"--make-ddi=sysext",
@@ -106,7 +111,7 @@ func NewSysextCmd() *cobra.Command {
 				// Another layer to verify images, even if its a manual check, we make it easier
 				fmt.Sprintf("--seed=%s", uuid.NewV5(uuid.NamespaceDNS, "kairos-sysext")),
 				fmt.Sprintf("--copy-source=%s", dir),
-				fmt.Sprintf("%s.sysext.raw", name), // output sysext image
+				output, // output sysext image
 				fmt.Sprintf("--private-key=%s", viper.Get("private-key")),
 				fmt.Sprintf("--certificate=%s", viper.Get("certificate")),
 			)
@@ -117,7 +122,7 @@ func NewSysextCmd() *cobra.Command {
 				return err
 			}
 
-			cfg.Logger.Logger.Info().Str("output", fmt.Sprintf("%s.sysext.raw", name)).Msg("🎉 Done sysext creation")
+			cfg.Logger.Logger.Info().Str("output", output).Msg("🎉 Done sysext creation")
 			return nil
 		},
 	}
@@ -125,6 +130,7 @@ func NewSysextCmd() *cobra.Command {
 	c.Flags().String("certificate", "", "Certificate to sign the sysext with")
 	c.Flags().Bool("service-reload", false, "Make systemctl reload the service when loading the sysext. This is useful for sysext that provide systemd service files.")
 	c.Flags().String("arch", "amd64", "Arch to get the image from and build the sysext for. Accepts amd64 and arm64 values.")
+	c.Flags().String("output", "", "Output dir")
 	_ = c.MarkFlagRequired("private-key")
 	_ = c.MarkFlagRequired("certificate")
 

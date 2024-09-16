@@ -36,6 +36,8 @@ RUN cp /tmp/luet-${TARGETARCH}.yaml /etc/luet/luet.yaml
 RUN luet install -y system/systemd-boot
 
 RUN dnf install -y binutils mtools efitools shim openssl dosfstools xorriso rsync
+# for sysext creation
+RUN dnf install -y erofs-utils
 
 COPY --from=builder /enki /enki
 
