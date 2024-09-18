@@ -10,7 +10,7 @@ require (
 	github.com/google/go-containerregistry v0.20.2
 	github.com/google/uuid v1.6.0
 	github.com/kairos-io/go-ukify v0.2.2
-	github.com/kairos-io/kairos-agent/v2 v2.14.0
+	github.com/kairos-io/kairos-agent/v2 v2.14.1
 	github.com/kairos-io/kairos-sdk v0.4.5
 	github.com/klauspost/compress v1.17.9
 	github.com/mitchellh/mapstructure v1.5.0
@@ -206,7 +206,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	howett.net/plist v1.0.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/mount-utils v0.31.0 // indirect
+	k8s.io/mount-utils v0.31.1 // indirect
 	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
 	pault.ag/go/modprobe v0.1.2 // indirect
 	pault.ag/go/topsort v0.1.1 // indirect
