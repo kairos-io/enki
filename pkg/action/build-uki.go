@@ -469,11 +469,14 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		return err
 	}
 
+	align := int64(4 * 1024 * 1024)
+	efiSizeMB := (artifactSize/align*align + align) / (1024 * 1024)
+
 	imgFile := filepath.Join(isoDir, "efiboot.img")
 
 	var (
-		espSize          int64 = (artifactSize + 50) * 1024 * 1024 // 100 MB
-		diskSize         int64 = espSize + 4*1024*1024             // 104 MB
+		espSize          int64 = (efiSizeMB + 50) * 1024 * 1024 // 100 MB
+		diskSize         int64 = espSize + 4*1024*1024          // 104 MB
 		partitionStart   int64 = 2048
 		partitionSectors int64 = espSize / 512
 		partitionEnd     int64 = partitionSectors - partitionStart + 1

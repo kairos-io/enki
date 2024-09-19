@@ -34,8 +34,10 @@ RUN mkdir -p /etc/luet/
 RUN cp /tmp/luet-${TARGETARCH}.yaml /etc/luet/luet.yaml
 ## Uki artifacts, will be set under the /usr/kairos directory
 RUN luet install -y system/systemd-boot
+RUN luet install -y livecd/grub2 --system-target /grub2
+RUN luet install -y livecd/grub2-efi-image --system-target /efi
 
-RUN dnf install -y binutils mtools efitools shim openssl dosfstools rsync
+RUN dnf install -y binutils efitools shim openssl rsync
 # for sysext creation
 RUN dnf install -y erofs-utils
 

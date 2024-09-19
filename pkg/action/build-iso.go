@@ -2,6 +2,14 @@ package action
 
 import (
 	"fmt"
+	"github.com/diskfs/go-diskfs"
+	"github.com/diskfs/go-diskfs/disk"
+	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/diskfs/go-diskfs/filesystem/iso9660"
+	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
+	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
+	"io"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -9,9 +17,8 @@ import (
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
-	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
-	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	sdk "github.com/kairos-io/kairos-sdk/utils"
+	"github.com/twpayne/go-vfs/v5"
 )
 
 type BuildISOAction struct {
@@ -35,6 +42,8 @@ func NewBuildISOAction(cfg *types.BuildConfig, spec *types.LiveISO, opts ...Buil
 }
 
 // ISORun will install the system from a given configuration
+// Rootdir is where the files are in that end up in the iso
+// isoDir is where the final image will be?
 func (b *BuildISOAction) ISORun() (err error) {
 	cleanup := sdk.NewCleanStack()
 	defer func() { err = cleanup.Cleanup(err) }()
@@ -47,12 +56,6 @@ func (b *BuildISOAction) ISORun() (err error) {
 
 	rootDir := filepath.Join(isoTmpDir, "rootfs")
 	err = utils.MkdirAll(b.cfg.Fs, rootDir, constants.DirPerm)
-	if err != nil {
-		return err
-	}
-
-	uefiDir := filepath.Join(isoTmpDir, "uefi")
-	err = utils.MkdirAll(b.cfg.Fs, uefiDir, constants.DirPerm)
 	if err != nil {
 		return err
 	}
@@ -90,9 +93,15 @@ func (b *BuildISOAction) ISORun() (err error) {
 		return err
 	}
 
-	err = b.prepareISORoot(isoDir, rootDir, uefiDir)
+	err = b.prepareISORoot(isoDir, rootDir)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed preparing ISO's root tree: %v", err)
+		return err
+	}
+
+	err = b.CreateEfiImage(rootDir, isoDir)
+	if err != nil {
+		b.cfg.Logger.Errorf("Failed filling EFI directory: %v", err)
 		return err
 	}
 
@@ -106,8 +115,66 @@ func (b *BuildISOAction) ISORun() (err error) {
 	return err
 }
 
-func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir string) error {
-	kernel, initrd, err := b.e.FindKernelInitrd(rootDir)
+func FindKernelInitrd(rootDir string) (kernel string, initrd string, err error) {
+	kernelNames := []string{"uImage", "Image", "zImage", "vmlinuz", "image"}
+	initrdNames := []string{"initrd", "initramfs"}
+	kernel, err = FindFileWithPrefix(vfs.OSFS, filepath.Join(rootDir, "boot"), kernelNames...)
+	if err != nil {
+		fmt.Println("No Kernel file found")
+		return "", "", err
+	}
+	initrd, err = FindFileWithPrefix(vfs.OSFS, filepath.Join(rootDir, "boot"), initrdNames...)
+	if err != nil {
+		fmt.Println("No initrd file found")
+		return "", "", err
+	}
+	return kernel, initrd, nil
+}
+
+func FindFileWithPrefix(fs vfs.FS, path string, prefixes ...string) (string, error) {
+	files, err := fs.ReadDir(path)
+	if err != nil {
+		return "", err
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			continue
+		}
+		for _, p := range prefixes {
+			if strings.HasPrefix(f.Name(), p) {
+				info, _ := f.Info()
+				if info.Mode()&os.ModeSymlink == os.ModeSymlink {
+					found, err := fs.Readlink(filepath.Join(path, f.Name()))
+					if err == nil {
+						if !filepath.IsAbs(found) {
+							found = filepath.Join(path, found)
+						}
+						if exists, _ := Exists(fs, found); exists {
+							return found, nil
+						}
+					}
+				} else {
+					return filepath.Join(path, f.Name()), nil
+				}
+			}
+		}
+	}
+	return "", fmt.Errorf("No file found with prefixes: %v", prefixes)
+}
+
+func Exists(fs vfs.FS, path string) (bool, error) {
+	_, err := fs.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string) error {
+	kernel, initrd, err := FindKernelInitrd(rootDir)
 	if err != nil {
 		b.cfg.Logger.Error("Could not find kernel and/or initrd")
 		return err
@@ -129,12 +196,6 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 		return err
 	}
 
-	b.cfg.Logger.Info("Creating EFI image...")
-	err = b.createEFI(rootDir, isoDir)
-	if err != nil {
-		return err
-	}
-
 	b.cfg.Logger.Info("Creating squashfs...")
 	err = utils.CreateSquashFS(b.cfg.Runner, b.cfg.Logger, rootDir, filepath.Join(isoDir, constants.IsoRootFile), constants.GetDefaultSquashfsOptions())
 	if err != nil {
@@ -144,24 +205,17 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 	return nil
 }
 
-// createEFI creates the EFI image that is used for booting
+// CreateEfiImage copies the needed EFI files from rootdir and creeate an image in the isodir
 // it searches the rootfs for the shim/grub.efi file and copies it into a directory with the proper EFI structure
 // then it generates a grub.cfg that chainloads into the grub.cfg of the livecd (which is the normal livecd grub config from luet packages)
-// then it calculates the size of the EFI image based on the files copied and creates the image
-func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
+func (b BuildISOAction) CreateEfiImage(rootdir string, isoDir string) error {
 	var err error
 
-	// rootfs /efi dir
-	img := filepath.Join(isoDir, constants.IsoEFIPath)
 	temp, _ := utils.TempDir(b.cfg.Fs, "", "enki-iso")
+
 	err = utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, constants.EfiBootPath), constants.DirPerm)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed creating temp efi dir: %v", err)
-		return err
-	}
-	err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, constants.EfiBootPath), constants.DirPerm)
-	if err != nil {
-		b.cfg.Logger.Errorf("Failed creating iso efi dir: %v", err)
 		return err
 	}
 
@@ -179,7 +233,8 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	// Its read from the root of the livecd, so we need to copy it into /EFI/BOOT/grub.cfg
 	// This is due to the hybrid bios/efi boot mode of the livecd
 	// the uefi.img is loaded into memory and run, but grub only sees the livecd root
-	err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+	os.MkdirAll(filepath.Join(filepath.Join(temp, constants.EfiBootPath)), constants.DirPerm)
+	err = b.cfg.Fs.WriteFile(filepath.Join(temp, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
 	if err != nil {
 		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 		return err
@@ -194,54 +249,47 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	b.cfg.Logger.Infof("Detected Flavor: %s", flavor)
 	if err == nil && strings.Contains(strings.ToLower(flavor), "ubuntu") {
 		b.cfg.Logger.Infof("Ubuntu based ISO detected, copying grub.cfg to /EFI/ubuntu/grub.cfg")
-		err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, "EFI/ubuntu/"), constants.DirPerm)
+		err = utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, "EFI/ubuntu/"), constants.DirPerm)
 		if err != nil {
 			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 			return err
 		}
-		err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+		err = b.cfg.Fs.WriteFile(filepath.Join(temp, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
 		if err != nil {
 			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 			return err
 		}
 	}
 
-	// Calculate EFI image size based on artifacts
-	efiSize, err := utils.DirSize(b.cfg.Fs, temp)
-	if err != nil {
-		return err
-	}
-	// align efiSize to the next 4MB slot
-	align := int64(4 * 1024 * 1024)
-	efiSizeMB := (efiSize/align*align + align) / (1024 * 1024)
-	// Create the actual efi image
-	err = b.e.CreateFileSystemImage(&v1.Image{
-		File:  img,
-		Size:  uint(efiSizeMB),
-		FS:    constants.EfiFs,
-		Label: constants.EfiLabel,
-	})
-	if err != nil {
-		return err
-	}
-	b.cfg.Logger.Debugf("EFI image created at %s", img)
-	// copy the files from the temporal efi dir into the EFI image
-	files, err := b.cfg.Fs.ReadDir(temp)
-	if err != nil {
-		return err
-	}
-
-	for _, f := range files {
-		// This copies the efi files into the efi img used for the boot
-		b.cfg.Logger.Debugf("Copying %s to %s", filepath.Join(temp, f.Name()), img)
-		_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(temp, f.Name()), "::")
-		if err != nil {
-			b.cfg.Logger.Errorf("Failed copying %s to %s: %v", filepath.Join(temp, f.Name()), img, err)
-			return err
-		}
-	}
+	// Now create an efi image at the constants.IsoEFIPath in the final isoDir
 
 	return nil
+
+	// Calculate EFI image size based on artifacts
+	//efiSize, err := utils.DirSize(b.cfg.Fs, temp)
+	//if err != nil {
+	//	return err
+	//}
+	// align efiSize to the next 4MB slot
+	//align := int64(4 * 1024 * 1024)
+	//efiSizeMB := (efiSize/align*align + align) / (1024 * 1024)
+
+	//files, err := b.cfg.Fs.ReadDir(temp)
+	//if err != nil {
+	//	return err
+	//}
+
+	//for _, f := range files {
+	// This copies the efi files into the efi img used for the boot
+	//	b.cfg.Logger.Debugf("Copying %s", filepath.Join(temp, f.Name()))
+	//_, err = b.cfg.Runner.Run("mcopy", "-s", "-i", img, filepath.Join(temp, f.Name()), "::")
+	//if err != nil {
+	//	b.cfg.Logger.Errorf("Failed copying %s to %s: %v", filepath.Join(temp, f.Name()), img, err)
+	//	return err
+	//}
+	//}
+
+	//return nil
 }
 
 // copyShim copies the shim files into the EFI partition
@@ -375,18 +423,17 @@ func (b BuildISOAction) copyGrub(tempdir, rootdir string) error {
 }
 
 func (b BuildISOAction) burnISO(root string) error {
-	cmd := "xorriso"
 	var outputFile string
-	var isoFileName string
+	var isoName string
 
 	if b.cfg.Date {
 		currTime := time.Now()
-		isoFileName = fmt.Sprintf("%s.%s.iso", b.cfg.Name, currTime.Format("20060102"))
+		isoName = fmt.Sprintf("%s.%s.iso", b.cfg.Name, currTime.Format("20060102"))
 	} else {
-		isoFileName = fmt.Sprintf("%s.iso", b.cfg.Name)
+		isoName = fmt.Sprintf("%s.iso", b.cfg.Name)
 	}
 
-	outputFile = isoFileName
+	outputFile = isoName
 	if b.cfg.OutDir != "" {
 		outputFile = filepath.Join(b.cfg.OutDir, outputFile)
 	}
@@ -399,23 +446,114 @@ func (b BuildISOAction) burnISO(root string) error {
 		}
 	}
 
-	args := []string{
-		"-volid", b.spec.Label, "-joliet", "on", "-padding", "0",
-		"-outdev", outputFile, "-map", root, "/", "-chmod", "0755", "--",
-	}
-	args = append(args, constants.GetXorrisoBooloaderArgs(root)...)
-
-	out, err := b.cfg.Runner.Run(cmd, args...)
-	b.cfg.Logger.Debugf("Xorriso: %s", string(out))
+	// Get size of first partition
+	isoSize, err := FolderSize(root)
 	if err != nil {
-		return err
+		return fmt.Errorf("error checking size: %w", err)
+	}
+
+	mydisk, err := diskfs.Create(outputFile, isoSize, diskfs.Raw, diskfs.SectorSizeDefault)
+	if err != nil {
+		return fmt.Errorf("error creating output iso file %s: %w", filepath.Join(outputFile, isoName), err)
+	}
+
+	// For isos
+	mydisk.LogicalBlocksize = 2048
+
+	isoFs, err := mydisk.CreateFilesystem(
+		disk.FilesystemSpec{
+			Partition: 0, FSType: filesystem.TypeISO9660, VolumeLabel: b.spec.Label,
+		},
+	)
+
+	if err != nil {
+		return fmt.Errorf("error creating filesystem: %w", err)
+	}
+
+	// Copy boot image + bios stuff
+	err = filepath.WalkDir(root, func(path string, info os.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("error creating iso file: %w", err)
+		}
+		b.cfg.Logger.Infof("Doing path %s", path)
+
+		relPath, err := filepath.Rel(root, path)
+		if err != nil {
+			return fmt.Errorf("error getting relpath of %s: %w", path, err)
+		}
+
+		// If the current path is a folder, create the folder in the ISO filesystem
+		if info.IsDir() {
+			// Create the directory in the ISO file
+			err = isoFs.Mkdir(relPath)
+			if err != nil {
+				return fmt.Errorf("error creating dir %s: %w", relPath, err)
+			}
+			return nil
+		}
+
+		// If the current path is a file, copy the file to the ISO filesystem
+		if !info.IsDir() {
+			// Open the file in the ISO file for writing
+			rw, err := isoFs.OpenFile(relPath, os.O_CREATE|os.O_RDWR)
+			if err != nil {
+				return fmt.Errorf("error opening file %s: %w", relPath, err)
+			}
+			defer rw.Close()
+
+			// Open the source file for reading
+			in, errorOpeningFile := os.Open(path)
+			if errorOpeningFile != nil {
+				return errorOpeningFile
+			}
+			defer in.Close()
+
+			// Copy the contents of the source file to the ISO file
+			_, err = io.Copy(rw, in)
+			if err != nil {
+				return fmt.Errorf("error copying file: %w", err)
+			}
+		}
+
+		return nil
+	})
+
+	iso, ok := isoFs.(*iso9660.FileSystem)
+	if !ok {
+		return fmt.Errorf("not an iso9660 filesystem")
+	}
+
+	err = iso.Finalize(iso9660.FinalizeOptions{
+		VolumeIdentifier: b.spec.Label,
+		RockRidge:        true,
+		ElTorito: &iso9660.ElTorito{
+			//BootCatalog: constants.IsoBootCatalog,
+			HideBootCatalog: true,
+			Entries: []*iso9660.ElToritoEntry{
+				{
+					Platform:  iso9660.BIOS,
+					Emulation: iso9660.NoEmulation,
+					BootFile:  constants.IsoEFIPath,
+					BootTable: true,
+					LoadSize:  4,
+				},
+				{
+					Platform:  iso9660.EFI,
+					Emulation: iso9660.NoEmulation,
+					BootFile:  constants.IsoEFIPath,
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("error creating iso file: %w", err)
 	}
 
 	checksum, err := utils.CalcFileChecksum(b.cfg.Fs, outputFile)
 	if err != nil {
 		return fmt.Errorf("checksum computation failed: %w", err)
 	}
-	err = b.cfg.Fs.WriteFile(fmt.Sprintf("%s.sha256", outputFile), []byte(fmt.Sprintf("%s %s\n", checksum, isoFileName)), 0644)
+	err = b.cfg.Fs.WriteFile(fmt.Sprintf("%s.sha256", outputFile), []byte(fmt.Sprintf("%s %s\n", checksum, isoName)), 0644)
 	if err != nil {
 		return fmt.Errorf("cannot write checksum file: %w", err)
 	}
