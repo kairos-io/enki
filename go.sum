@@ -302,6 +302,8 @@ github.com/docker/docker v27.2.0+incompatible h1:Rk9nIVdfH3+Vz4cyI/uhbINhEZ/oLmc
 github.com/docker/docker v27.2.0+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker v27.2.1+incompatible h1:fQdiLfW7VLscyoeYEBz7/J8soYFDZV1u6VW6gJEjNMI=
 github.com/docker/docker v27.2.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
+github.com/docker/docker v27.3.1+incompatible h1:KttF0XoteNTicmUtBO0L2tP+J7FGRFTjaEF4k6WdhfI=
+github.com/docker/docker v27.3.1+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker-credential-helpers v0.7.0 h1:xtCHsjxogADNZcdv1pKUHXryefjlVRqWqIhk/uXJp0A=
 github.com/docker/docker-credential-helpers v0.7.0/go.mod h1:rETQfLdHNT3foU5kuNkFR1R1V12OJRRO5lzt2D1b5X0=
 github.com/docker/go-connections v0.4.0 h1:El9xVISelRB7BuFusrZozjnkIM5YnzCViNKohAFqRJQ=
@@ -687,6 +689,8 @@ github.com/kairos-io/kairos-agent/v2 v2.14.4 h1:CLgEgQwpzy2h1bktWclhqj+wrBUqjaen
 github.com/kairos-io/kairos-agent/v2 v2.14.4/go.mod h1:OCBg6EXasH6AawXRgehWohZravEFmJXaCWmx7vl774w=
 github.com/kairos-io/kairos-agent/v2 v2.14.5 h1:H8bZbAX8z6hqTq1OZHFL/qderxKWeD/Y8Feptq7KP44=
 github.com/kairos-io/kairos-agent/v2 v2.14.5/go.mod h1:OCBg6EXasH6AawXRgehWohZravEFmJXaCWmx7vl774w=
+github.com/kairos-io/kairos-agent/v2 v2.14.6 h1:H5vVASPqO6vT/ZIiQwygGypL2XmFGmFJExmhk/IPCw4=
+github.com/kairos-io/kairos-agent/v2 v2.14.6/go.mod h1:Ty/gWUPNvHqztTms0Jyi4Fga5gk2dSUKRc8XjlATUrg=
 github.com/kairos-io/kairos-sdk v0.4.1 h1:WF+X30URojMxV7AlzVj0uejvPWG4zq1WNga0swAX4dY=
 github.com/kairos-io/kairos-sdk v0.4.1/go.mod h1:lgQAYkh0aWIZg4/CQcC+OPQp95ONs2PzkMIcAq8w6OY=
 github.com/kairos-io/kairos-sdk v0.4.2-0.20240903105642-a509f9388eb6 h1:auCG/aP/esvKCq1aeeoyqieTMbRO7WHKs4fY05WWXc0=
@@ -703,6 +707,8 @@ github.com/kairos-io/kairos-sdk v0.4.4 h1:FolUGqpdTnYYdLwFEOND97QEp2H/htVjW7pHUO
 github.com/kairos-io/kairos-sdk v0.4.4/go.mod h1:OIJYihhuiUOeBXHYj9V3R381SAgc/EaKrFepcBxGroM=
 github.com/kairos-io/kairos-sdk v0.4.5 h1:ja3GBPODLPx4X/9dEALncpDIHvFH8TdEBMda0H6O49o=
 github.com/kairos-io/kairos-sdk v0.4.5/go.mod h1:OIJYihhuiUOeBXHYj9V3R381SAgc/EaKrFepcBxGroM=
+github.com/kairos-io/kairos-sdk v0.4.6 h1:6dbKozJTku99P2vytz9M0xAnpkKKiAggSMPfT2vpw68=
+github.com/kairos-io/kairos-sdk v0.4.6/go.mod h1:QXYmZ2BMrJ0Iyp7I3+rvCYpZRMvwOtK/6IGCLhNL4tY=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c h1:eKb4PqwAMhlqwXw0W3atpKaYaPGlXE/Fwh+xpCEYaPk=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c/go.mod h1:VOfm8h1NySetVlpHDSnbpCMsvCgYaU+YDn4XezUy2+4=
 github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
@@ -821,6 +827,8 @@ github.com/mudler/go-processmanager v0.0.0-20240820160718-8b802d3ecf82 h1:FVT07E
 github.com/mudler/go-processmanager v0.0.0-20240820160718-8b802d3ecf82/go.mod h1:Urp7LG5jylKoDq0663qeBh0pINGcRl35nXdKx82PSoU=
 github.com/mudler/yip v1.9.4 h1:yaiPKWG5kt/DTNCf7ZGfyWdb1j5c06zYqWF3F+SVKsE=
 github.com/mudler/yip v1.9.4/go.mod h1:nqf8JFCq7a7rIkm7cSs+SOc8QbiyvVJ/xLbUw4GgzFs=
+github.com/mudler/yip v1.10.0 h1:MwEIySEfSRRwTUz2BmQQpRn6+M7jqVGf/OldsepBvz0=
+github.com/mudler/yip v1.10.0/go.mod h1:gwH7iGcr1Jimox2xKtN2AprEO00GzY7smvuycqCL7+Y=
 github.com/mwitkow/go-conntrack v0.0.0-20161129095857-cc309e4a2223/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f/go.mod h1:qRWi+5nqEBWmkhHvq77mSJWrCKwh8bxhgT7d/eI7P4U=
 github.com/mwitkow/go-proto-validators v0.0.0-20180403085117-0950a7990007/go.mod h1:m2XC9Qq0AlmmVksL6FktJCdTYyLk7V3fKyp0sl1yWQo=
@@ -1181,6 +1189,8 @@ github.com/yusufpapurcu/wmi v1.2.4 h1:zFUKzehAFReQwLys1b/iSMl+JQGSCSjtVqQn9bBrPo
 github.com/yusufpapurcu/wmi v1.2.4/go.mod h1:SBZ9tNy3G9/m5Oi98Zks0QjeHVDvuK0qfxQmPyzfmi0=
 github.com/zcalusic/sysinfo v1.1.0 h1:79Hqn8h4poVz6T57/4ezXbT5ZkZbZm7u1YU1C4paMyk=
 github.com/zcalusic/sysinfo v1.1.0/go.mod h1:NX+qYnWGtJVPV0yWldff9uppNKU4h40hJIRPf/pGLv4=
+github.com/zcalusic/sysinfo v1.1.2 h1:38KUgZQmCxlN9vUTt4miis4rU5ISJXGXOJ2rY7bMC8g=
+github.com/zcalusic/sysinfo v1.1.2/go.mod h1:NX+qYnWGtJVPV0yWldff9uppNKU4h40hJIRPf/pGLv4=
 go.etcd.io/bbolt v1.3.2/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.3/go.mod h1:IbVyRI1SCnLcuJnV2u8VeU0CEYM7e686BmAb1XKL+uU=
 go.etcd.io/bbolt v1.3.5/go.mod h1:G5EMThwa9y8QZGBClrRx5EY+Yw9kAhnjy3bSjsnlVTQ=
