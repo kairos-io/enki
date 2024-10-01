@@ -186,13 +186,19 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 	}
 	// Ubuntu efi searches for the grub.cfg file under /EFI/ubuntu/grub.cfg while we store it under /boot/grub2/grub.cfg
 	// workaround this by copying it there as well
-	// read the os-release from the rootfs to know if we are creating a ubuntu based iso
-	flavor, err := sdk.OSRelease("FLAVOR", filepath.Join(rootdir, "etc/os-release"))
+	// read the kairos-release from the rootfs to know if we are creating a ubuntu based iso
+	var flavor string
+	flavor, err = sdk.OSRelease("FLAVOR", filepath.Join(rootdir, "etc/kairos-release"))
 	if err != nil {
-		b.cfg.Logger.Warnf("Failed reading os-release from %s: %v", filepath.Join(rootdir, "etc/os-release"), err)
+		// fallback to os-release
+		flavor, err = sdk.OSRelease("FLAVOR", filepath.Join(rootdir, "etc/os-release"))
+		if err != nil {
+			b.cfg.Logger.Warnf("Failed reading os-release from %s and %s: %v", filepath.Join(rootdir, "etc/kairos-release"), filepath.Join(rootdir, "etc/os-release"), err)
+			return err
+		}
 	}
 	b.cfg.Logger.Infof("Detected Flavor: %s", flavor)
-	if err == nil && strings.Contains(strings.ToLower(flavor), "ubuntu") {
+	if strings.Contains(strings.ToLower(flavor), "ubuntu") {
 		b.cfg.Logger.Infof("Ubuntu based ISO detected, copying grub.cfg to /EFI/ubuntu/grub.cfg")
 		err = utils.MkdirAll(b.cfg.Fs, filepath.Join(isoDir, "EFI/ubuntu/"), constants.DirPerm)
 		if err != nil {
