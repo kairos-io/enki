@@ -653,8 +653,6 @@ github.com/julienschmidt/httprouter v1.2.0/go.mod h1:SYymIcj16QtmaHHD7aYtjjsJG7V
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
 github.com/kairos-io/go-ukify v0.2.2 h1:gY3iFcula7BnZHH23fvJv91SFhdqvrTb+xhbxSjF9Fo=
 github.com/kairos-io/go-ukify v0.2.2/go.mod h1:AgMOguzoI9hYZFYA6XA24fEhxY8Tq+7mHKovA3jsTys=
-github.com/kairos-io/kairos-agent/v2 v2.14.6 h1:H5vVASPqO6vT/ZIiQwygGypL2XmFGmFJExmhk/IPCw4=
-github.com/kairos-io/kairos-agent/v2 v2.14.6/go.mod h1:Ty/gWUPNvHqztTms0Jyi4Fga5gk2dSUKRc8XjlATUrg=
 github.com/kairos-io/kairos-agent/v2 v2.13.4 h1:nM7FprcvjfYKFE+pTrk7o729eyvZRknPpRjz1L9Ofy0=
 github.com/kairos-io/kairos-agent/v2 v2.13.4/go.mod h1:jL2olRMpUgWHVtSsCZIhShWYuCK2eCwr6f1xOAjJs/A=
 github.com/kairos-io/kairos-agent/v2 v2.13.5 h1:WEEU6efzWlsbT6KQNir6h3WmrdVgwGq7kab/xtVNvOs=
@@ -671,6 +669,8 @@ github.com/kairos-io/kairos-agent/v2 v2.14.5 h1:H8bZbAX8z6hqTq1OZHFL/qderxKWeD/Y
 github.com/kairos-io/kairos-agent/v2 v2.14.5/go.mod h1:OCBg6EXasH6AawXRgehWohZravEFmJXaCWmx7vl774w=
 github.com/kairos-io/kairos-agent/v2 v2.14.6 h1:H5vVASPqO6vT/ZIiQwygGypL2XmFGmFJExmhk/IPCw4=
 github.com/kairos-io/kairos-agent/v2 v2.14.6/go.mod h1:Ty/gWUPNvHqztTms0Jyi4Fga5gk2dSUKRc8XjlATUrg=
+github.com/kairos-io/kairos-agent/v2 v2.14.7 h1:0hkaOLkLOR5EJCJlsPj1kXMe1SqdCo59cRyEyoH4bQs=
+github.com/kairos-io/kairos-agent/v2 v2.14.7/go.mod h1:Ty/gWUPNvHqztTms0Jyi4Fga5gk2dSUKRc8XjlATUrg=
 github.com/kairos-io/kairos-sdk v0.4.1 h1:WF+X30URojMxV7AlzVj0uejvPWG4zq1WNga0swAX4dY=
 github.com/kairos-io/kairos-sdk v0.4.1/go.mod h1:lgQAYkh0aWIZg4/CQcC+OPQp95ONs2PzkMIcAq8w6OY=
 github.com/kairos-io/kairos-sdk v0.4.2-0.20240903105642-a509f9388eb6 h1:auCG/aP/esvKCq1aeeoyqieTMbRO7WHKs4fY05WWXc0=
