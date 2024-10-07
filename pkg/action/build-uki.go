@@ -738,9 +738,14 @@ func ZstdFile(sourcePath, targetPath string) error {
 }
 
 func findKairosVersion(sourceDir string) (string, error) {
-	osReleaseBytes, err := os.ReadFile(filepath.Join(sourceDir, "etc", "os-release"))
+	var osReleaseBytes []byte
+	osReleaseBytes, err := os.ReadFile(filepath.Join(sourceDir, "etc", "kairos-release"))
 	if err != nil {
-		return "", fmt.Errorf("reading os-release file: %w", err)
+		// fallback to os-release
+		osReleaseBytes, err = os.ReadFile(filepath.Join(sourceDir, "etc", "os-release"))
+		if err != nil {
+			return "", fmt.Errorf("reading kairos-release file: %w", err)
+		}
 	}
 
 	re := regexp.MustCompile("(?m)^KAIROS_RELEASE=\"(.*)\"")
