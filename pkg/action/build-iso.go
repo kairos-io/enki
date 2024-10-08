@@ -2,16 +2,20 @@ package action
 
 import (
 	"fmt"
-	"path/filepath"
-	"strings"
-	"time"
-
+	"github.com/diskfs/go-diskfs"
+	"github.com/diskfs/go-diskfs/filesystem"
+	"github.com/diskfs/go-diskfs/filesystem/squashfs"
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/kairos-io/enki/pkg/types"
 	"github.com/kairos-io/enki/pkg/utils"
 	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	sdk "github.com/kairos-io/kairos-sdk/utils"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
 )
 
 type BuildISOAction struct {
@@ -136,12 +140,135 @@ func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir st
 	}
 
 	b.cfg.Logger.Info("Creating squashfs...")
-	err = utils.CreateSquashFS(b.cfg.Runner, b.cfg.Logger, rootDir, filepath.Join(isoDir, constants.IsoRootFile), constants.GetDefaultSquashfsOptions())
+	//err = utils.CreateSquashFS(b.cfg.Runner, b.cfg.Logger, rootDir, filepath.Join(isoDir, constants.IsoRootFile), constants.GetDefaultSquashfsOptions())
+	err = CreateSquashFS(b.cfg, rootDir, filepath.Join(isoDir, constants.IsoRootFile))
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func CreateSquashFS(cfg *types.BuildConfig, source string, destination string) (err error) {
+	diskSize, err := utils.DirSize(cfg.Fs, source)
+	if err != nil {
+		return err
+	}
+	cfg.Logger.Logger.Info().Int64("size", diskSize).Msg("Calculated size")
+	cfg.Logger.Logger.Info().Str("source", source).Str("destination", destination).Msg("Creating squashfs")
+
+	mydisk, err := diskfs.Create(destination, diskSize, diskfs.Raw, 4096)
+	if err != nil {
+		return err
+	}
+	cfg.Logger.Logger.Info().Str("source", source).Str("destination", destination).Msg("Created squashfs")
+
+	cfg.Logger.Logger.Info().Str("source", source).Str("destination", destination).Msg("Creating filesystem")
+	squashFS, err := squashfs.Create(mydisk.File, mydisk.Size, 0, mydisk.LogicalBlocksize)
+	if err != nil {
+		return err
+	}
+	cfg.Logger.Logger.Info().Str("source", source).Str("destination", destination).Msg("Created filesystem")
+
+	cfg.Logger.Logger.Info().Str("source", source).Str("destination", destination).Msg("Copying files")
+	err = copyDir(cfg, source, source, squashFS)
+	if err != nil {
+		return err
+	}
+	cfg.Logger.Logger.Info().Str("source", source).Str("destination", destination).Msg("Copied files")
+
+	err = squashFS.Finalize(squashfs.FinalizeOptions{})
+	if err != nil {
+		return err
+	}
+	return err
+}
+
+func copyDir(cfg *types.BuildConfig, root, src string, dst filesystem.FileSystem) error {
+	// Get properties of source dir
+	cfg.Logger.Logger.Debug().Str("path", src).Msg("Doing path")
+	relPath, err := filepath.Rel(root, src)
+	if err != nil {
+		return fmt.Errorf("error getting relpath of %s: %w", src, err)
+	}
+	relPath = filepath.Join("/", relPath)
+	cfg.Logger.Logger.Debug().Str("destination", relPath).Msg("Doing path")
+	// Create the destination directory
+	err = dst.Mkdir(relPath)
+	if err != nil {
+		return err
+	}
+
+	directory, _ := os.Open(src)
+	objects, err := directory.Readdir(-1)
+	if err != nil {
+		return err
+	}
+	defer directory.Close()
+
+	for _, obj := range objects {
+		srcFilePath := filepath.Join(src, obj.Name())
+		if obj.IsDir() {
+			// Create sub-directories - recursively
+			err = copyDir(cfg, root, srcFilePath, dst)
+			if err != nil {
+				cfg.Logger.Logger.Error().Err(err).Str("src", srcFilePath).Msg("Failed to copy directory")
+				return err
+			}
+		} else {
+			if obj.Mode()&os.ModeSymlink != 0 {
+				// TODO: symlink
+				continue
+			} else {
+				// Copy files
+				err = copyFile(cfg, root, srcFilePath, dst)
+				if err != nil {
+					cfg.Logger.Logger.Error().Err(err).Str("src", srcFilePath).Msg("Failed to copy file")
+					return err
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func copyFile(cfg *types.BuildConfig, root, src string, dst filesystem.FileSystem) error {
+	cfg.Logger.Logger.Debug().Str("source", src).Msg("Copying file")
+	sourceFileStat, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	relPath, err := filepath.Rel(root, src)
+	if err != nil {
+		return fmt.Errorf("error getting relpath of %s: %w", src, err)
+	}
+	relPath = filepath.Join("/", relPath)
+
+	if !sourceFileStat.Mode().IsRegular() {
+		return fmt.Errorf("%s is not a regular file", src)
+	}
+
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	rw, err := dst.OpenFile(relPath, os.O_CREATE|os.O_RDWR)
+	if err != nil {
+		return fmt.Errorf("error opening file %s: %w", src, err)
+	}
+	defer rw.Close()
+
+	// Open the source file for reading
+
+	// Copy the contents of the source file to the ISO file
+	_, err = io.Copy(rw, source)
+	if err != nil {
+		return fmt.Errorf("error copying file: %w", err)
+	}
+	return err
 }
 
 // createEFI creates the EFI image that is used for booting
@@ -410,10 +537,11 @@ func (b BuildISOAction) burnISO(root string) error {
 		"-outdev", outputFile, "-map", root, "/", "-chmod", "0755", "--",
 	}
 	args = append(args, constants.GetXorrisoBooloaderArgs(root)...)
-
+	b.cfg.Logger.Logger.Info().Strs("args", args).Msg("running xorriso")
 	out, err := b.cfg.Runner.Run(cmd, args...)
 	b.cfg.Logger.Debugf("Xorriso: %s", string(out))
 	if err != nil {
+		b.cfg.Logger.Logger.Error().Err(err).Str("output", string(out)).Msg("Failed to build iso")
 		return err
 	}
 
