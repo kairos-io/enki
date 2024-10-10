@@ -158,6 +158,7 @@ func (b *BuildUKIAction) Run() error {
 			SBCert:        filepath.Join(b.keysDirectory, "db.pem"),
 			SdBootPath:    systemdBoot,
 			OutSdBootPath: outputSystemdBootEfi,
+			Splash:        viper.GetString("splash"),
 		}
 
 		if err := os.Chdir(sourceDir); err != nil {
