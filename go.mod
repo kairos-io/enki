@@ -12,7 +12,7 @@ require (
 	github.com/kairos-io/go-ukify v0.2.3
 	github.com/kairos-io/kairos-agent/v2 v2.15.1
 	github.com/kairos-io/kairos-sdk v0.6.0
-	github.com/klauspost/compress v1.17.10
+	github.com/klauspost/compress v1.17.11
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mudler/go-processmanager v0.0.0-20240820160718-8b802d3ecf82
 	github.com/onsi/ginkgo/v2 v2.20.2
