@@ -661,6 +661,8 @@ github.com/kairos-io/kairos-agent/v2 v2.15.1 h1:bVgfAk15HOqjT4wlxC3EVlhcO3IAc8UO
 github.com/kairos-io/kairos-agent/v2 v2.15.1/go.mod h1:a8Faigm7sqJZ4yRwdmhUnsImkSsrIvPjJEMhCBOcshc=
 github.com/kairos-io/kairos-agent/v2 v2.15.2 h1:QOWk5GfWOMcTm5oLUnSNtEr72BKAfd7YFO0af4WtyMU=
 github.com/kairos-io/kairos-agent/v2 v2.15.2/go.mod h1:a8Faigm7sqJZ4yRwdmhUnsImkSsrIvPjJEMhCBOcshc=
+github.com/kairos-io/kairos-agent/v2 v2.15.3 h1:ikmUC7w5K4kZXdWQH3SFqaOVQgjVZi88U386B3IjDkM=
+github.com/kairos-io/kairos-agent/v2 v2.15.3/go.mod h1:a8Faigm7sqJZ4yRwdmhUnsImkSsrIvPjJEMhCBOcshc=
 github.com/kairos-io/kairos-sdk v0.6.0 h1:A096lZVHE4rkvA5kG0Oss0085T0noUcf7AeppWGySR8=
 github.com/kairos-io/kairos-sdk v0.6.0/go.mod h1:7Y6Y/McniCyAJcmQfoTfKd09cwmwS40URaIVbJn8V2k=
 github.com/kendru/darwin/go/depgraph v0.0.0-20221105232959-877d6a81060c h1:eKb4PqwAMhlqwXw0W3atpKaYaPGlXE/Fwh+xpCEYaPk=
