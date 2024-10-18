@@ -4,7 +4,7 @@ go 1.23.1
 
 require (
 	github.com/containerd/containerd v1.7.23
-	github.com/foxboron/go-uefi v0.0.0-20240805124652-e2076f0e58ca
+	github.com/foxboron/go-uefi v0.0.0-20241017190036-fab4fdf2f2f3
 	github.com/foxboron/sbctl v0.0.0-20240526163235-64e649b31c8e
 	github.com/gofrs/uuid v4.4.0+incompatible
 	github.com/google/go-containerregistry v0.20.2
