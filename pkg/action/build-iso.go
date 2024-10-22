@@ -2,6 +2,7 @@ package action
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -96,6 +97,12 @@ func (b *BuildISOAction) ISORun() (err error) {
 		return err
 	}
 
+	err = b.prepareBootArtifacts(isoDir)
+	if err != nil {
+		b.cfg.Logger.Errorf("Failed preparing boot artifacts: %v", err)
+		return err
+	}
+
 	b.cfg.Logger.Infof("Creating ISO image...")
 	err = b.burnISO(isoDir)
 	if err != nil {
@@ -104,6 +111,24 @@ func (b *BuildISOAction) ISORun() (err error) {
 	}
 
 	return err
+}
+
+// prepareBootArtifacts will write the needed artifacts for BIOS cd boot into the isoDir
+// so xorriso can use those to build the bootable iso file
+func (b *BuildISOAction) prepareBootArtifacts(isoDir string) error {
+	err := os.WriteFile(filepath.Join(isoDir, constants.IsoBootFile), constants.Eltorito, constants.FilePerm)
+	if err != nil {
+		return err
+	}
+	err = os.WriteFile(filepath.Join(isoDir, constants.IsoHybridMBR), constants.BootHybrid, constants.FilePerm)
+	if err != nil {
+		return err
+	}
+	err = os.MkdirAll(filepath.Join(isoDir, constants.GrubPrefixDir), constants.DirPerm)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(isoDir, constants.GrubPrefixDir, constants.GrubCfg), constants.GrubLiveBiosCfg, constants.FilePerm)
 }
 
 func (b BuildISOAction) prepareISORoot(isoDir string, rootDir string, uefiDir string) error {

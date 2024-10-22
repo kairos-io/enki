@@ -6,6 +6,38 @@ import (
 	"path/filepath"
 )
 
+import _ "embed"
+
+// Eltorito image is basically a grub cdboot.img + grub core image
+// So basically you build a grub image with modules embedded and prepend it with the cdboot, which allows it to boot from
+// CDRom and run the grub embedded in the image directly from BIOS
+// This can be generated from any distro by runing something like:
+/*
+grub2-mkimage -O i386-pc -o core.img -p /boot/grub2 -d PATH_TO_i386_MODULES ext2 iso9660 linux echo configfile search_label search_fs_file search search_fs_uuid ls normal gzio gettext font gfxterm gfxmenu all_video test true loadenv part_gpt part_msdos biosdisk vga vbe chain boot
+cat $(find / -name cdboot.img -print) core.img > eltorito.img
+
+Important things in the grub image creation:
+ - -O i386-pc is the architecture we want to build the image for. Bios is i386
+ - -p is the prefix dir, this is where grub will start searching for things, including the grub.cfg config, when it boots
+ - -d is the current dir where modules and images are. Usually this is automatically set so it can be dropped
+ - the list at the end are the modules to bundle for grub. Honestly the list is not too big and it can probably be dropped to like half for the livecd
+   as it only uses linux, echo, font, video ones and boot. But it doesnt hurt to have extra modules.
+*/
+//go:embed eltorito.img
+var Eltorito []byte
+
+// BootHybrid is boot_hybrid.img which comes bundled with grub
+// Its ASM to boot from the grub image embedded
+// You can check its source here: https://github.com/rhboot/grub2/blob/fedora-39/grub-core/boot/i386/pc/cdboot.S
+//
+//go:embed boot_hybrid.img
+var BootHybrid []byte
+
+// GrubLiveBiosCfg is the livecd config for BIOS boot
+//
+//go:embed grub_live_bios.cfg
+var GrubLiveBiosCfg []byte
+
 type UkiOutput string
 
 const IsoOutput UkiOutput = "iso"
@@ -34,9 +66,9 @@ const (
 		"\nset prefix=($root)" + GrubPrefixDir +
 		"\nconfigfile $prefix/" + GrubCfg
 
-	IsoHybridMBR   = "/boot/x86_64/loader/boot_hybrid.img"
-	IsoBootCatalog = "/boot/x86_64/boot.catalog"
-	IsoBootFile    = "/boot/x86_64/loader/eltorito.img"
+	IsoHybridMBR   = "/boot/boot_hybrid.img"
+	IsoBootCatalog = "/boot/boot.catalog"
+	IsoBootFile    = "/boot/eltorito.img"
 
 	// These paths are arbitrary but coupled to grub.cfg
 	IsoKernelPath = "/boot/kernel"
