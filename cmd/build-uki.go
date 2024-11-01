@@ -55,12 +55,6 @@ func NewBuildUKICmd() *cobra.Command {
 				if !ol.IsDir() {
 					return fmt.Errorf("overlay-rootfs is not a directory: %s", overlayRootfs)
 				}
-
-				// Transform it into absolute path
-				absolutePath, err := filepath.Abs(overlayRootfs)
-				if err != nil {
-					viper.Set("overlay-rootfs", absolutePath)
-				}
 			}
 			overlayIso, _ := cmd.Flags().GetString("overlay-iso")
 			if overlayIso != "" {
@@ -77,12 +71,6 @@ func NewBuildUKICmd() *cobra.Command {
 				// Check if we are setting a different artifact and overlay-iso is set
 				if artifact != string(constants.IsoOutput) {
 					return fmt.Errorf("overlay-iso is only supported for iso artifacts")
-				}
-
-				// Transform it into absolute path
-				absolutePath, err := filepath.Abs(overlayIso)
-				if err != nil {
-					viper.Set("overlay-iso", absolutePath)
 				}
 			}
 
@@ -124,10 +112,19 @@ func NewBuildUKICmd() *cobra.Command {
 			}
 
 			flags := cmd.Flags()
-			outputDir, _ := flags.GetString("output-dir")
-			keysDir, _ := flags.GetString("keys")
-			outputType, _ := flags.GetString("output-type")
-			a := action.NewBuildUKIAction(cfg, imgSource, outputDir, keysDir, outputType)
+			cfg.Name, _ = flags.GetString("name")
+			cfg.OutDir, _ = flags.GetString("output-dir")
+			cfg.OutputType, _ = flags.GetString("output-type")
+			cfg.KeysDir, _ = flags.GetString("keys")
+			overlayRootfs, _ := flags.GetString("overlay-rootfs")
+			if absolutePath, err := filepath.Abs(overlayRootfs); err != nil {
+				cfg.OverlayRootFS = absolutePath
+			}
+			overlayISO, _ := flags.GetString("overlay-iso")
+			if absolutePath, err := filepath.Abs(overlayISO); err != nil {
+				cfg.OverlayISO = absolutePath
+			}
+			a := action.NewBuildUKIAction(cfg, imgSource)
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())
@@ -158,7 +155,6 @@ func NewBuildUKICmd() *cobra.Command {
 	c.MarkFlagRequired("keys")
 	// Mark some flags as mutually exclusive
 	c.MarkFlagsMutuallyExclusive([]string{"extra-cmdline", "extend-cmdline"}...)
-	viper.BindPFlags(c.Flags())
 	return c
 }
 

@@ -18,9 +18,13 @@ type LiveISO struct {
 
 // BuildConfig represents the config we need for building isos, raw images, artifacts
 type BuildConfig struct {
-	Date   bool   `yaml:"date,omitempty" mapstructure:"date"`
-	Name   string `yaml:"name,omitempty" mapstructure:"name"`
-	OutDir string `yaml:"output,omitempty" mapstructure:"output"`
+	Date          bool   `yaml:"date,omitempty" mapstructure:"date"`
+	Name          string `yaml:"name,omitempty" mapstructure:"name"`
+	OutDir        string `yaml:"output,omitempty" mapstructure:"output"`
+	OutputType    string `yaml:"output_type,omitempty" mapstructure:"output_type"`
+	KeysDir       string `yaml:"keys_dir,omitempty" mapstructure:"keys_dir"`
+	OverlayRootFS string `yaml:"overlay_rootfs,omitempty" mapstructure:"overlay_rootfs"`
+	OverlayISO    string `yaml:"overlay_iso,omitempty" mapstructure:"overlay_iso"`
 
 	// 'inline' and 'squash' labels ensure config fields
 	// are embedded from a yaml and map PoV

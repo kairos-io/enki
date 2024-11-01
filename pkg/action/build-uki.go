@@ -15,7 +15,6 @@ import (
 	"github.com/kairos-io/enki/pkg/constants"
 	"github.com/klauspost/compress/zstd"
 	"github.com/sanity-io/litter"
-	"github.com/spf13/viper"
 	"github.com/u-root/u-root/pkg/cpio"
 	"golang.org/x/exp/maps"
 
@@ -28,25 +27,32 @@ import (
 )
 
 type BuildUKIAction struct {
-	img           *v1.ImageSource
-	e             *elemental.Elemental
-	outputDir     string
-	keysDirectory string
-	logger        sdkTypes.KairosLogger
-	outputType    string
-	version       string
-	arch          string
-	name          string
+	img                    *v1.ImageSource
+	e                      *elemental.Elemental
+	outputDir              string
+	overlayRootFS          string
+	secureBootEnroll       string
+	includeVersionInConfig bool
+	includeCmdLineInConfig bool
+	overlayISO             string
+	defaultEntry           string
+	splash                 string
+	keysDirectory          string
+	logger                 sdkTypes.KairosLogger
+	outputType             string
+	version                string
+	arch                   string
+	name                   string
 }
 
-func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource, outputDir, keysDirectory, outputType string) *BuildUKIAction {
+func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource) *BuildUKIAction {
 	b := &BuildUKIAction{
 		logger:        cfg.Logger,
 		img:           img,
 		e:             elemental.NewElemental(&cfg.Config),
-		outputDir:     outputDir,
-		keysDirectory: keysDirectory,
-		outputType:    outputType,
+		outputDir:     cfg.OutDir,
+		keysDirectory: cfg.KeysDir,
+		outputType:    cfg.OutputType,
 		arch:          cfg.Arch,
 		name:          cfg.Name,
 	}
@@ -76,9 +82,9 @@ func (b *BuildUKIAction) Run() error {
 	}
 	defer os.RemoveAll(sourceDir)
 
-	if viper.GetString("overlay-rootfs") != "" {
-		b.logger.Infof("Adding files from %s to rootfs", viper.GetString("overlay-rootfs"))
-		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay-rootfs")))
+	if b.overlayRootFS != "" {
+		b.logger.Infof("Adding files from %s to rootfs", b.overlayRootFS)
+		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", b.overlayRootFS))
 		if err != nil {
 			b.logger.Errorf("error creating overlay image: %s", err)
 			return err
@@ -158,7 +164,7 @@ func (b *BuildUKIAction) Run() error {
 			SBCert:        filepath.Join(b.keysDirectory, "db.pem"),
 			SdBootPath:    systemdBoot,
 			OutSdBootPath: outputSystemdBootEfi,
-			Splash:        viper.GetString("splash"),
+			Splash:        b.splash,
 		}
 
 		if err := os.Chdir(sourceDir); err != nil {
@@ -215,7 +221,7 @@ func (b *BuildUKIAction) Run() error {
 // createSystemdConf creates the generic conf that systemd-boot uses
 func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 	var finalEfiConf string
-	entry := viper.GetString("default-entry")
+	entry := b.defaultEntry
 	if entry != "" {
 		if !strings.HasSuffix(entry, ".conf") {
 			finalEfiConf = strings.TrimSuffix(entry, " ") + ".conf"
@@ -229,9 +235,8 @@ func (b *BuildUKIAction) createSystemdConf(sourceDir string) error {
 		finalEfiConf = utils.NameFromCmdline(constants.ArtifactBaseName, constants.UkiCmdline+" "+constants.UkiCmdlineInstall) + ".conf"
 	}
 
-	secureBootEnroll := viper.GetString("secure-boot-enroll")
 	// Set that as default selection for booting
-	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\nsecure-boot-enroll %s\n", finalEfiConf, secureBootEnroll)
+	data := fmt.Sprintf("default %s\ntimeout 5\nconsole-mode max\neditor no\nsecure-boot-enroll %s\n", finalEfiConf, b.secureBootEnroll)
 	err := os.WriteFile(filepath.Join(sourceDir, "loader.conf"), []byte(data), os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("creating the loader.conf file: %s", err)
@@ -446,11 +451,11 @@ func (b *BuildUKIAction) createConfFiles(sourceDir, cmdline, title, finalEfiName
 
 	configData := fmt.Sprintf("title %s\nefi /EFI/kairos/%s.efi\n", title, finalEfiName)
 
-	if viper.GetBool("include-version-in-config") {
+	if b.includeVersionInConfig {
 		configData = fmt.Sprintf("%sversion %s\n", configData, b.version)
 	}
 
-	if viper.GetBool("include-cmdline-in-config") {
+	if b.includeCmdLineInConfig {
 		configData = fmt.Sprintf("%scmdline %s\n", configData, strings.Trim(extraCmdline, " "))
 	}
 
@@ -502,9 +507,9 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 		return err
 	}
 
-	if viper.GetString("overlay-iso") != "" {
-		b.logger.Infof("Adding files from %s to iso", viper.GetString("overlay-iso"))
-		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", viper.GetString("overlay-iso")))
+	if b.overlayISO != "" {
+		b.logger.Infof("Adding files from %s to iso", b.overlayISO)
+		overlay, err := v1.NewSrcFromURI(fmt.Sprintf("dir:%s", b.overlayISO))
 		if err != nil {
 			b.logger.Errorf("error creating overlay image: %s", err)
 			return err
@@ -515,7 +520,6 @@ func (b *BuildUKIAction) createISO(sourceDir string) error {
 			b.logger.Errorf("error copying overlay image: %s", err)
 			return err
 		}
-
 	}
 
 	isoName := fmt.Sprintf("kairos_%s.iso", b.version)
