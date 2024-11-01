@@ -9,6 +9,7 @@ import (
 	"github.com/kairos-io/enki/pkg/action"
 	"github.com/kairos-io/enki/pkg/config"
 	"github.com/kairos-io/enki/pkg/constants"
+	"github.com/kairos-io/kairos-agent/v2/pkg/elemental"
 	v1 "github.com/kairos-io/kairos-agent/v2/pkg/types/v1"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -112,19 +113,49 @@ func NewBuildUKICmd() *cobra.Command {
 			}
 
 			flags := cmd.Flags()
-			cfg.Name, _ = flags.GetString("name")
-			cfg.OutDir, _ = flags.GetString("output-dir")
-			cfg.OutputType, _ = flags.GetString("output-type")
-			cfg.KeysDir, _ = flags.GetString("keys")
+			name, _ := flags.GetString("name")
+			outDir, _ := flags.GetString("output-dir")
+			outputType, _ := flags.GetString("output-type")
+			keysDir, _ := flags.GetString("keys")
 			overlayRootfs, _ := flags.GetString("overlay-rootfs")
+			defaultEntry, _ := flags.GetString("default-entry")
+			secureBootEnroll, _ := flags.GetString("secure-boot-enroll")
+			includeVersionInConfig, _ := flags.GetBool("include-version-in-config")
+			includeCmdLineInConfig, _ := flags.GetBool("include-cmdline-in-config")
 			if absolutePath, err := filepath.Abs(overlayRootfs); err != nil {
-				cfg.OverlayRootFS = absolutePath
+				overlayRootfs = absolutePath
 			}
 			overlayISO, _ := flags.GetString("overlay-iso")
 			if absolutePath, err := filepath.Abs(overlayISO); err != nil {
-				cfg.OverlayISO = absolutePath
+				overlayISO = absolutePath
 			}
-			a := action.NewBuildUKIAction(cfg, imgSource)
+			a := action.NewBuildUKIAction(cfg,
+				action.WithName(name),
+				action.WithLogger(cfg.Logger),
+				action.WithArch(cfg.Arch),
+				action.WithImage(imgSource),
+				action.WithOutputDir(outDir),
+				action.WithOutputType(outputType),
+				action.WithKeysDir(keysDir),
+				action.WithOverlayRootFS(overlayRootfs),
+				action.WithOverlayISO(overlayISO),
+				action.WithDefaultEntry(defaultEntry),
+				action.WithSecureBootEnroll(secureBootEnroll),
+				action.WithIncludeCmdLineInConfig(includeCmdLineInConfig),
+				action.WithIncludeVersionInConfig(includeVersionInConfig),
+			)
+
+			b := &BuildUKIAction{
+				logger:        cfg.Logger,
+				img:           img,
+				e:             elemental.NewElemental(&cfg.Config),
+				outputDir:     cfg.OutDir,
+				keysDirectory: cfg.KeysDir,
+				outputType:    cfg.OutputType,
+				arch:          cfg.Arch,
+				name:          cfg.Name,
+			}
+
 			err = a.Run()
 			if err != nil {
 				cfg.Logger.Errorf(err.Error())

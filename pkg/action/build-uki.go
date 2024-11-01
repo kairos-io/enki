@@ -45,7 +45,55 @@ type BuildUKIAction struct {
 	name                   string
 }
 
-func NewBuildUKIAction(cfg *types.BuildConfig, img *v1.ImageSource) *BuildUKIAction {
+type BuildUKIActionOpt func(a *BuildUKIAction)
+
+func WithLogger(logger sdkTypes.KairosLogger) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.logger = logger }
+}
+func WithImage(img *v1.ImageSource) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.img = img }
+}
+func WithOutputDir(dir string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.outputDir = dir }
+}
+func WithOutputType(outType string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.outputType = outType }
+}
+func WithKeysDir(dir string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.keysDirectory = dir }
+}
+func WithArch(arch string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.arch = arch }
+}
+func WithName(name string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.name = name }
+}
+func WithOverlayRootFS(o string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.overlayRootFS = o }
+}
+func WithOverlayISO(o string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.overlayISO = o }
+}
+func WithDefaultEntry(e string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.defaultEntry = e }
+}
+func WithSplash(s string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.splash = s }
+}
+func WithVersion(v string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.version = v }
+}
+func WithSecureBootEnroll(s string) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.secureBootEnroll = s }
+}
+func WithIncludeVersionInConfig(s bool) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.includeVersionInConfig = s }
+}
+func WithIncludeCmdLineInConfig(s bool) func(a *BuildUKIAction) {
+	return func(a *BuildUKIAction) { a.includeCmdLineInConfig = s }
+}
+
+func NewBuildUKIAction(cfg *types.BuildConfig, opts ...BuildUKIActionOpt) *BuildUKIAction {
 	b := &BuildUKIAction{
 		logger:        cfg.Logger,
 		img:           img,
