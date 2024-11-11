@@ -35,7 +35,7 @@ func NewEnki(image string, dirs ...string) *Enki {
 // are in place (or to test the behavior of enki when they are not), we run enki
 // in a container using this function.
 func (e *Enki) Run(enkiArgs ...string) (string, error) {
-	return e.ContainerRun(e.Path, enkiArgs...)
+	return e.ContainerRun("/bin/enki", enkiArgs...)
 }
 
 // We need --privileged for `mount` to work in the container (used in the build_uki_test.go).

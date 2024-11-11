@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/kairos-io/enki/cmd"
 	"log"
 	"os"
 	"os/signal"
+
+	"github.com/kairos-io/enki/cmd"
 )
 
 func main() {

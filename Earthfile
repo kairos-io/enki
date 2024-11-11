@@ -38,7 +38,7 @@ test:
     ENV CGO_ENABLED=1
     # Some test require the docker sock exposed
     WITH DOCKER --load enki-image=(+enki-image)
-        RUN go run github.com/onsi/ginkgo/v2/ginkgo run --label-filter "build-uki && genkey" -v --fail-fast --race --covermode=atomic --coverprofile=coverage.out --coverpkg=github.com/kairos-io/enki/... -p -r $TEST_PATHS
+        RUN go run github.com/onsi/ginkgo/v2/ginkgo run --label-filter "build-uki || genkey" -v --fail-fast --race --covermode=atomic --coverprofile=coverage.out --coverpkg=github.com/kairos-io/enki/... -p -r $TEST_PATHS
     END
     SAVE ARTIFACT coverage.out AS LOCAL coverage.out
 
