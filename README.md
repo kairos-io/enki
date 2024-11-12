@@ -1,4 +1,5 @@
-This repository is archived. All the functionality provided by enki has been ported to [Auroraboot](https://github.com/kairos-io/AuroraBoot) since [version v0.3.0](https://github.com/kairos-io/AuroraBoot/releases/tag/v0.3.0). Also since [v0.3.1](https://github.com/kairos-io/AuroraBoot/releases/tag/v0.3.1), Auroraboot no longer depends on enki (all code has been ported over).
+> [!WARNING]
+> This repository is archived. All the functionality provided by enki has been ported to [Auroraboot](https://github.com/kairos-io/AuroraBoot) since [version v0.3.0](https://github.com/kairos-io/AuroraBoot/releases/tag/v0.3.0). Also since [v0.3.1](https://github.com/kairos-io/AuroraBoot/releases/tag/v0.3.1), Auroraboot no longer depends on enki (all code has been ported over).
 
 `enki` is the tool used to generate Kairos artifacts (container images, isos etc) and it is used
 by [`Auroraboot`](https://kairos.io/docs/reference/auroraboot/) and [osbuilder](https://github.com/kairos-io/osbuilder/)
