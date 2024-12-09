@@ -18,7 +18,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.21.0
 	github.com/onsi/gomega v1.35.1
 	github.com/sanity-io/litter v1.5.5
-	github.com/sirupsen/logrus v1.9.4-0.20230606125235-dd1b4c2e81af
+	github.com/sirupsen/logrus v1.9.4-0.20241118143825-d1e633264448
 	github.com/spectrocloud/peg v0.0.0-20240405075800-c5da7125e30f
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
