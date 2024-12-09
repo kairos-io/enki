@@ -184,6 +184,11 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 		return err
 	}
+	err = b.cfg.Fs.WriteFile(filepath.Join(temp, constants.EfiBootPath, constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+	if err != nil {
+		b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+		return err
+	}
 	// Ubuntu efi searches for the grub.cfg file under /EFI/ubuntu/grub.cfg while we store it under /boot/grub2/grub.cfg
 	// workaround this by copying it there as well
 	// read the os-release from the rootfs to know if we are creating a ubuntu based iso
@@ -199,7 +204,17 @@ func (b BuildISOAction) createEFI(rootdir string, isoDir string) error {
 			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 			return err
 		}
+		err = utils.MkdirAll(b.cfg.Fs, filepath.Join(temp, "EFI/ubuntu/"), constants.DirPerm)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+			return err
+		}
 		err = b.cfg.Fs.WriteFile(filepath.Join(isoDir, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
+		if err != nil {
+			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
+			return err
+		}
+		err = b.cfg.Fs.WriteFile(filepath.Join(temp, "EFI/ubuntu/", constants.GrubCfg), []byte(constants.GrubEfiCfg), constants.FilePerm)
 		if err != nil {
 			b.cfg.Logger.Errorf("Failed writing grub.cfg: %v", err)
 			return err
