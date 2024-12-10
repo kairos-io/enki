@@ -2,6 +2,8 @@ module github.com/kairos-io/enki
 
 go 1.22.1
 
+replace github.com/tredoe/osutil/v2 v2.0.0-rc.16 => ./third_party/osutil/v2@v2.0.0-rc.16
+
 require (
 	github.com/containerd/containerd v1.7.18
 	github.com/foxboron/go-uefi v0.0.0-20240522180132-205d5597883a
